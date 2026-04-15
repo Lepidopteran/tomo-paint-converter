@@ -1,5 +1,5 @@
 use std::{fs::read, path::PathBuf};
-use tomo_image_converter::{image_from_canvas, image_from_ugctex, image_from_ugctex_thumb};
+use tomo_image_converter::{image_from_canvas, image_from_texture, image_from_thumbnail};
 
 use clap::Parser;
 
@@ -35,9 +35,9 @@ fn main() {
         "canvas" => image_from_canvas(&buffer).expect("Failed to read canvas"),
         "ugctex" => {
             if prefix.ends_with("Thumb") {
-                image_from_ugctex_thumb(&buffer).expect("Failed to read ugctex")
+                image_from_thumbnail(&buffer).expect("Failed to read ugctex")
             } else {
-                image_from_ugctex(&buffer, prefix.contains("Food")).expect("Failed to read ugctex")
+                image_from_texture(&buffer, prefix.contains("Food")).expect("Failed to read ugctex")
             }
         }
         _ => panic!("Unsupported file type"),
