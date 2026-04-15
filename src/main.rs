@@ -21,6 +21,7 @@ fn main() {
         .to_string_lossy();
     let mut file_parts = file_name.split('.').collect::<Vec<_>>();
     let mut extension = file_parts.pop().expect("Failed to get extension");
+    let prefix = file_parts.first().cloned().expect("Failed to get prefix");
 
     let input_bytes = read(&input).expect("Failed to read input");
     let buffer: Vec<u8> = if extension == "zs" {
@@ -32,7 +33,10 @@ fn main() {
 
     let image = match extension {
         "canvas" => image_from_canvas(&buffer).expect("Failed to read canvas"),
-        "ugctex" => image_from_ugctex(&buffer).expect("Failed to read ugctex"),
+        "ugctex" => {
+            image_from_ugctex(&buffer, prefix.contains("Food")).expect("Failed to read ugctex")
+        }
+
         _ => panic!("Unsupported file type"),
     };
 
