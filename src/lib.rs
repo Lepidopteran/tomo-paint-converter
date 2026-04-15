@@ -6,14 +6,19 @@ const FOOD_SIZE: u32 = 384;
 const THUMBNAIL_SIZE: u32 = 256;
 const CANVAS_SIZE: u32 = 256;
 
+const DEPTH: u32 = 1;
+const UNCOMPRESSED_BLOCK_SIZE: u32 = 4;
+const BC1_BLOCK_SIZE: u32 = 8;
+const BC3_BLOCK_SIZE: u32 = 16;
+
 pub fn image_from_canvas(bytes: &[u8]) -> color_eyre::Result<DynamicImage> {
     let deswizzled_bytes = deswizzle_block_linear(
         CANVAS_SIZE,
         CANVAS_SIZE,
-        1,
+        DEPTH,
         bytes,
         block_height_mip0(CANVAS_SIZE),
-        4,
+        UNCOMPRESSED_BLOCK_SIZE,
     )?;
 
     let buffer = ImageBuffer::from_raw(CANVAS_SIZE, CANVAS_SIZE, deswizzled_bytes)
@@ -26,7 +31,8 @@ pub fn image_from_thumbnail(bytes: &[u8]) -> color_eyre::Result<DynamicImage> {
     let size = div_round_up(THUMBNAIL_SIZE, 4);
 
     let block_height = block_height_mip0(size);
-    let deswizzled_bytes = deswizzle_block_linear(size, size, 1, bytes, block_height, 16)?;
+    let deswizzled_bytes =
+        deswizzle_block_linear(size, size, 1, bytes, block_height, BC3_BLOCK_SIZE)?;
 
     let bc3 = texpresso::Format::Bc3;
     let mut rgba_buffer: Vec<u8> = vec![0; THUMBNAIL_SIZE as usize * THUMBNAIL_SIZE as usize * 4];
@@ -50,8 +56,14 @@ pub fn image_from_texture(bytes: &[u8], food: bool) -> color_eyre::Result<Dynami
     let compressed_size = div_round_up(size, 4);
 
     let block_height = block_height_mip0(compressed_size);
-    let deswizzled_bytes =
-        deswizzle_block_linear(compressed_size, compressed_size, 1, bytes, block_height, 8)?;
+    let deswizzled_bytes = deswizzle_block_linear(
+        compressed_size,
+        compressed_size,
+        1,
+        bytes,
+        block_height,
+        BC1_BLOCK_SIZE,
+    )?;
 
     let bc1 = texpresso::Format::Bc1;
     let mut rgba_buffer: Vec<u8> = vec![0; size as usize * size as usize * 4];
