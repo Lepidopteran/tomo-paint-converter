@@ -143,9 +143,6 @@ fn main() {
                 input_bytes
             };
 
-            println!("Extension: {extension}");
-            println!("Prefix: {prefix}");
-
             let image = match extension {
                 "canvas" => image_from_canvas(&buffer).expect("Failed to read canvas"),
                 "ugctex" => {
