@@ -7,7 +7,7 @@ use tomo_image_converter::*;
 
 use clap::{Parser, Subcommand};
 
-const COMPRESSION_LEVEL: i32 = 3;
+const COMPRESSION_LEVEL: i32 = 19;
 
 /// Output type of texture
 #[derive(clap::ValueEnum, Debug, Clone, Copy, Eq, PartialEq)]
@@ -67,7 +67,7 @@ enum Command {
         #[arg(short, long)]
         output: PathBuf,
     },
-    /// Compress file using zstd
+    /// Compress file using zstd compression
     Compress {
         /// Input image
         #[arg(short, long)]
@@ -76,8 +76,8 @@ enum Command {
         #[arg(short, long)]
         output: PathBuf,
         /// Compression level
-        #[arg(short, long, default_value_t = COMPRESSION_LEVEL)]
-        level: i32,
+        #[arg(short = 'l', long, default_value_t = COMPRESSION_LEVEL)]
+        compression_level: i32,
     },
     /// Encode image to switch compatible format
     Encode {
@@ -96,6 +96,9 @@ enum Command {
         /// Texture ID suffix
         #[arg(short, long, default_value_t = 0)]
         number: u32,
+        /// Compression level of output textures
+        #[arg(short = 'l', long, default_value_t = COMPRESSION_LEVEL)]
+        compression_level: i32,
         /// Skip compression
         #[arg(long, default_value_t = false)]
         skip_compression: bool,
@@ -116,10 +119,11 @@ fn main() {
         Command::Compress {
             input,
             output,
-            level,
+            compression_level: level,
         } => {
             let input_bytes = read(&input).expect("Failed to read input");
-            let compressed_bytes = zstd::encode_all(input_bytes.as_slice(), level).unwrap();
+            let compressed_bytes = compress(&input_bytes, level).expect("Failed to compress file");
+
             write(&output, compressed_bytes).expect("Failed to write output");
         }
         Command::Decode { input, output } => {
@@ -163,6 +167,7 @@ fn main() {
             output_type,
             number,
             skip_compression,
+            compression_level,
             resize_method: resize,
         } => {
             let image = image::open(&input).expect("Failed to read input");
@@ -198,10 +203,11 @@ fn main() {
                     let mut file =
                         std::fs::File::create(&texture_path).expect("Failed to create file");
                     file.write_all(&bytes).expect("Failed to write texture");
+
+                    return;
                 }
 
-                let compressed = zstd::encode_all(bytes.as_slice(), COMPRESSION_LEVEL)
-                    .expect("Failed to compress");
+                let compressed = compress(&bytes, compression_level).expect("Failed to compress");
 
                 texture_path.set_extension("ugctex.zs");
 
@@ -241,8 +247,7 @@ fn main() {
                     return;
                 }
 
-                let compressed = zstd::encode_all(bytes.as_slice(), COMPRESSION_LEVEL)
-                    .expect("Failed to compress");
+                let compressed = compress(&bytes, compression_level).expect("Failed to compress");
 
                 let mut canvas_path = output_dir.clone();
                 canvas_path.push(&file_stem);
@@ -287,8 +292,7 @@ fn main() {
                     return;
                 }
 
-                let compressed = zstd::encode_all(bytes.as_slice(), COMPRESSION_LEVEL)
-                    .expect("Failed to compress");
+                let compressed = compress(&bytes, compression_level).expect("Failed to compress");
 
                 thumbnail_path.set_extension("ugctex.zs");
                 let mut file =
@@ -299,4 +303,15 @@ fn main() {
             }
         }
     }
+}
+
+fn compress(input: &[u8], level: i32) -> color_eyre::Result<Vec<u8>> {
+    let mut encoder = zstd::Encoder::new(Vec::new(), level)?;
+
+    encoder.set_pledged_src_size(Some(input.len() as u64))?;
+    encoder.include_contentsize(true)?;
+
+    encoder.write_all(input)?;
+
+    Ok(encoder.finish()?)
 }
