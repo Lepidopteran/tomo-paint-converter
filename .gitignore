@@ -1,2 +1,6 @@
 /target
 data
+*.canvas.zs
+*.ugctex.zs
+*.ugctex
+*.canvas

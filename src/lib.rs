@@ -1,15 +1,49 @@
 use image::{DynamicImage, ImageBuffer, RgbaImage};
-use tegra_swizzle::{block_height_mip0, div_round_up, swizzle::deswizzle_block_linear};
+use tegra_swizzle::{
+    block_height_mip0, div_round_up,
+    swizzle::{deswizzle_block_linear, swizzle_block_linear},
+};
+use texpresso::Params;
 
-const TEXTURE_SIZE: u32 = 512;
-const FOOD_SIZE: u32 = 384;
-const THUMBNAIL_SIZE: u32 = 256;
-const CANVAS_SIZE: u32 = 256;
+pub const TEXTURE_SIZE: u32 = 512;
+pub const FOOD_SIZE: u32 = 384;
+pub const THUMBNAIL_SIZE: u32 = 256;
+pub const CANVAS_SIZE: u32 = 256;
 
 const DEPTH: u32 = 1;
 const UNCOMPRESSED_BLOCK_SIZE: u32 = 4;
 const BC1_BLOCK_SIZE: u32 = 8;
 const BC3_BLOCK_SIZE: u32 = 16;
+
+pub fn bc1_compress_bytes(size: u32, bytes: &[u8]) -> color_eyre::Result<Vec<u8>> {
+    let bc1 = texpresso::Format::Bc1;
+    let mut encoded_bytes: Vec<u8> = vec![0u8; bc1.compressed_size(size as usize, size as usize)];
+
+    bc1.compress(
+        bytes,
+        size as usize,
+        size as usize,
+        Params::default(),
+        &mut encoded_bytes,
+    );
+
+    Ok(encoded_bytes)
+}
+
+pub fn bc3_compress_bytes(size: u32, bytes: &[u8]) -> color_eyre::Result<Vec<u8>> {
+    let bc3 = texpresso::Format::Bc3;
+    let mut encoded_bytes: Vec<u8> = vec![0u8; bc3.compressed_size(size as usize, size as usize)];
+
+    bc3.compress(
+        bytes,
+        size as usize,
+        size as usize,
+        Params::default(),
+        &mut encoded_bytes,
+    );
+
+    Ok(encoded_bytes)
+}
 
 pub fn image_from_canvas(bytes: &[u8]) -> color_eyre::Result<DynamicImage> {
     let deswizzled_bytes = deswizzle_block_linear(
@@ -25,6 +59,31 @@ pub fn image_from_canvas(bytes: &[u8]) -> color_eyre::Result<DynamicImage> {
         .expect("Failed to create image buffer");
 
     Ok(DynamicImage::ImageRgba8(buffer))
+}
+
+pub fn canvas_from_image(image: &DynamicImage) -> color_eyre::Result<Vec<u8>> {
+    let rgba_image = image.to_rgba8();
+
+    Ok(swizzle_block_linear(
+        CANVAS_SIZE,
+        CANVAS_SIZE,
+        1,
+        rgba_image.as_raw(),
+        block_height_mip0(CANVAS_SIZE),
+        UNCOMPRESSED_BLOCK_SIZE,
+    )?)
+}
+
+pub fn thumbnail_from_image(image: &DynamicImage) -> color_eyre::Result<Vec<u8>> {
+    let compressed_size = div_round_up(THUMBNAIL_SIZE, 4);
+    Ok(swizzle_block_linear(
+        compressed_size,
+        compressed_size,
+        DEPTH,
+        &bc3_compress_bytes(THUMBNAIL_SIZE, image.to_rgba8().as_raw())?,
+        block_height_mip0(compressed_size),
+        BC3_BLOCK_SIZE,
+    )?)
 }
 
 pub fn image_from_thumbnail(bytes: &[u8]) -> color_eyre::Result<DynamicImage> {
@@ -78,4 +137,18 @@ pub fn image_from_texture(bytes: &[u8], food: bool) -> color_eyre::Result<Dynami
     Ok(DynamicImage::ImageRgba8(
         RgbaImage::from_raw(size, size, rgba_buffer).expect("Failed to create rgba image"),
     ))
+}
+
+pub fn texture_from_image(image: &DynamicImage, food: bool) -> color_eyre::Result<Vec<u8>> {
+    let size = if food { FOOD_SIZE } else { TEXTURE_SIZE };
+
+    let compressed_size = div_round_up(size, 4);
+    Ok(swizzle_block_linear(
+        compressed_size,
+        compressed_size,
+        1,
+        &bc1_compress_bytes(size, image.to_rgba8().as_raw())?,
+        block_height_mip0(compressed_size),
+        BC1_BLOCK_SIZE,
+    )?)
 }
