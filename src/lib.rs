@@ -15,6 +15,46 @@ const UNCOMPRESSED_BLOCK_SIZE: u32 = 4;
 const BC1_BLOCK_SIZE: u32 = 8;
 const BC3_BLOCK_SIZE: u32 = 16;
 
+/// Output type of texture
+#[derive(clap::ValueEnum, Debug, Clone, Copy, Eq, PartialEq)]
+pub enum PaintType {
+    Food,
+    FacePaint,
+    Interior,
+    Exterior,
+    Treasure,
+    Cloth,
+    Terrain,
+    Object,
+}
+
+impl PaintType {
+    pub fn file_name(&self) -> &'static str {
+        match self {
+            PaintType::Food => "UgcFood",
+            PaintType::FacePaint => "UgcFacePaint",
+            PaintType::Interior => "UgcInterior",
+            PaintType::Exterior => "UgcExterior",
+            PaintType::Treasure => "UgcGoods",
+            PaintType::Cloth => "UgcCloth",
+            PaintType::Terrain => "UgcMapFloor",
+            PaintType::Object => "UgcMapObject",
+        }
+    }
+
+    pub fn has_thumbnail(&self) -> bool {
+        !matches!(self, Self::FacePaint)
+    }
+
+    pub fn has_canvas(&self) -> bool {
+        true
+    }
+
+    pub fn has_texture(&self) -> bool {
+        true
+    }
+}
+
 pub fn bc1_compress_bytes(size: u32, bytes: &[u8]) -> color_eyre::Result<Vec<u8>> {
     let bc1 = texpresso::Format::Bc1;
     let mut encoded_bytes: Vec<u8> = vec![0u8; bc1.compressed_size(size as usize, size as usize)];

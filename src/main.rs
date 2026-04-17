@@ -9,46 +9,6 @@ use clap::{Parser, Subcommand};
 
 const COMPRESSION_LEVEL: i32 = 19;
 
-/// Output type of texture
-#[derive(clap::ValueEnum, Debug, Clone, Copy, Eq, PartialEq)]
-pub enum PaintType {
-    Food,
-    FacePaint,
-    Interior,
-    Exterior,
-    Treasure,
-    Cloth,
-    Terrain,
-    Object,
-}
-
-impl PaintType {
-    pub fn file_name(&self) -> &'static str {
-        match self {
-            PaintType::Food => "UgcFood",
-            PaintType::FacePaint => "UgcFacePaint",
-            PaintType::Interior => "UgcInterior",
-            PaintType::Exterior => "UgcExterior",
-            PaintType::Treasure => "UgcGoods",
-            PaintType::Cloth => "UgcCloth",
-            PaintType::Terrain => "UgcMapFloor",
-            PaintType::Object => "UgcMapObject",
-        }
-    }
-
-    pub fn has_thumbnail(&self) -> bool {
-        !matches!(self, Self::FacePaint)
-    }
-
-    pub fn has_canvas(&self) -> bool {
-        true
-    }
-
-    pub fn has_texture(&self) -> bool {
-        true
-    }
-}
-
 #[derive(clap::ValueEnum, Debug, Clone, Copy)]
 enum ResizeType {
     /// Preserve image aspect ratio
