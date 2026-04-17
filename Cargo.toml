@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 clap = { version = "4.6.0", features = ["derive", "cargo"] }
 color-eyre = "0.6.5"
-ddsfile = "0.6.0"
 image = "0.25.10"
 tegra_swizzle = "0.4.0"
 texpresso = "2.0.2"
