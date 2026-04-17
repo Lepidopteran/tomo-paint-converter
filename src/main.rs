@@ -18,6 +18,8 @@ pub enum PaintType {
     Exterior,
     Good,
     Cloth,
+    Terrain,
+    Object,
 }
 
 impl PaintType {
@@ -29,6 +31,8 @@ impl PaintType {
             PaintType::Exterior => "UgcExterior",
             PaintType::Good => "UgcGoods",
             PaintType::Cloth => "UgcCloth",
+            PaintType::Terrain => "UgcMapFloor",
+            PaintType::Object => "UgcMapObject",
         }
     }
 
