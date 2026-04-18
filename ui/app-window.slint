@@ -28,6 +28,8 @@ export component AppWindow inherits Window {
     in property <string> input-path;
     in property <CompressionSettings> compression-settings;
 
+    in property <image> viewer-image;
+
     callback pick_file_input();
     callback pick_file_output();
     callback pick_folder_output();
@@ -35,6 +37,7 @@ export component AppWindow inherits Window {
     callback viewer_mode_changed(string);
     callback texture_type_changed(string);
 
+    title: "Tomo Paint Converter";
     min-width: 600px;
     min-height: 300px;
     HorizontalLayout {
@@ -44,21 +47,40 @@ export component AppWindow inherits Window {
             Rectangle {
                 background: Palette.alternate-background;
                 HorizontalBox {
-                    alignment: end;
+                    alignment: space-between;
 
-                    ComboBox {
-                        model: viewer-mode-model;
-                        selected(current-value) => {
-                            viewer_mode_changed(current-value);
+                    HorizontalLayout {
+                        spacing: 0.5rem;
+                        Text {
+                            text: "Viewer Mode";
+                            vertical-alignment: center;
+                        }
+
+                        ComboBox {
+                            model: viewer-mode-model;
+                            selected(current-value) => {
+                                viewer_mode_changed(current-value);
+                            }
                         }
                     }
                 }
             }
 
             VerticalLayout {
-
+                alignment: center;
                 Image {
                     vertical-stretch: 1;
+                    source: viewer-image;
+                }
+            }
+
+            HorizontalLayout {
+                alignment: start;
+                padding: 0.5rem;
+                spacing: 0.5rem;
+                Text {
+                    text: viewer-image.width + "x" + viewer-image.height;
+                    vertical-alignment: center;
                 }
             }
         }

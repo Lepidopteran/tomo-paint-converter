@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::{fmt::Display, io::Write, str::FromStr};
 
 use image::{DynamicImage, ImageBuffer, RgbaImage, imageops::FilterType};
 use tegra_swizzle::{
@@ -102,6 +102,52 @@ impl PaintType {
 
     pub fn has_texture(&self) -> bool {
         true
+    }
+
+    pub fn variants() -> Vec<String> {
+        vec![
+            PaintType::FacePaint.to_string(),
+            PaintType::Food.to_string(),
+            PaintType::Interior.to_string(),
+            PaintType::Exterior.to_string(),
+            PaintType::Treasure.to_string(),
+            PaintType::Cloth.to_string(),
+            PaintType::Terrain.to_string(),
+            PaintType::Object.to_string(),
+        ]
+    }
+}
+
+impl Display for PaintType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            PaintType::Food => "Food",
+            PaintType::FacePaint => "Face Paint",
+            PaintType::Interior => "Interior",
+            PaintType::Exterior => "Exterior",
+            PaintType::Treasure => "Treasure",
+            PaintType::Cloth => "Cloth",
+            PaintType::Terrain => "Terrain",
+            PaintType::Object => "Object",
+        })
+    }
+}
+
+impl FromStr for PaintType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().replace(" ", "").as_str() {
+            "food" => Ok(PaintType::Food),
+            "facepaint" => Ok(PaintType::FacePaint),
+            "interior" => Ok(PaintType::Interior),
+            "exterior" => Ok(PaintType::Exterior),
+            "treasure" => Ok(PaintType::Treasure),
+            "cloth" => Ok(PaintType::Cloth),
+            "terrain" => Ok(PaintType::Terrain),
+            "object" => Ok(PaintType::Object),
+            _ => Err(format!("Invalid paint type: {}", s)),
+        }
     }
 }
 

@@ -43,6 +43,13 @@ export component FilePickerInput {
         border-width: Platform.style-name == "fluent" ? 2px : 1px;
         border-color: Palette.border;
 
+        TouchArea {
+            enabled: root.enabled;
+            clicked => {
+                root.pick-requested();
+            }
+        }
+
         HorizontalLayout {
 
             Rectangle {
@@ -63,13 +70,6 @@ export component FilePickerInput {
             Rectangle {
                 background: Palette.control-background;
                 vertical-stretch: 1;
-
-                TouchArea {
-                    enabled: root.enabled;
-                    clicked => {
-                        root.pick-requested();
-                    }
-                }
 
                 VerticalLayout {
                     alignment: center;

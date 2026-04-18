@@ -11,7 +11,7 @@ image = "0.25.10"
 tegra_swizzle = "0.4.0"
 texpresso = "2.0.2"
 zstd = "0.13.3"
-slint = { version = "1.16.0", features = ["image-default-formats"] }
+slint = { version = "1.16.0", features = ["image-default-formats", "raw-window-handle-06"] }
 rfd = { version = "0.17.2", features = ["xdg-portal"] }
 
 [build-dependencies]
