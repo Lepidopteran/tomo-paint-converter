@@ -1,4 +1,6 @@
-use image::{DynamicImage, ImageBuffer, RgbaImage};
+use std::io::Write;
+
+use image::{DynamicImage, ImageBuffer, RgbaImage, imageops::FilterType};
 use tegra_swizzle::{
     block_height_mip0, div_round_up,
     swizzle::{deswizzle_block_linear, swizzle_block_linear},
@@ -14,6 +16,54 @@ const DEPTH: u32 = 1;
 const UNCOMPRESSED_BLOCK_SIZE: u32 = 4;
 const BC1_BLOCK_SIZE: u32 = 8;
 const BC3_BLOCK_SIZE: u32 = 16;
+
+#[derive(clap::ValueEnum, Debug, Clone, Copy)]
+pub enum ResizeType {
+    /// Preserve image aspect ratio
+    Preserve,
+    /// Fill image preserving aspect ratio and cropping
+    Fill,
+    /// Resize image to exact size, ignoring aspect ratio
+    Exact,
+}
+
+#[derive(clap::ValueEnum, Debug, Clone, Copy)]
+pub enum ResizeFilter {
+    /// Nearest neighbor
+    Nearest,
+    /// Bilinear
+    Bilinear,
+    /// Catmull-Rom
+    CatmullRom,
+    /// Gaussian
+    Gaussian,
+    /// Lanczos
+    Lanczos3,
+}
+
+impl From<FilterType> for ResizeFilter {
+    fn from(value: FilterType) -> Self {
+        match value {
+            FilterType::Nearest => Self::Nearest,
+            FilterType::Triangle => Self::Bilinear,
+            FilterType::CatmullRom => Self::CatmullRom,
+            FilterType::Gaussian => Self::Gaussian,
+            FilterType::Lanczos3 => Self::Lanczos3,
+        }
+    }
+}
+
+impl From<ResizeFilter> for FilterType {
+    fn from(value: ResizeFilter) -> Self {
+        match value {
+            ResizeFilter::Nearest => FilterType::Nearest,
+            ResizeFilter::Bilinear => FilterType::Triangle,
+            ResizeFilter::CatmullRom => FilterType::CatmullRom,
+            ResizeFilter::Gaussian => FilterType::Gaussian,
+            ResizeFilter::Lanczos3 => FilterType::Lanczos3,
+        }
+    }
+}
 
 /// Output type of texture
 #[derive(clap::ValueEnum, Debug, Clone, Copy, Eq, PartialEq)]
@@ -191,4 +241,15 @@ pub fn texture_from_image(image: &DynamicImage, food: bool) -> color_eyre::Resul
         block_height_mip0(compressed_size),
         BC1_BLOCK_SIZE,
     )?)
+}
+
+pub fn compress(input: &[u8], level: i32) -> color_eyre::Result<Vec<u8>> {
+    let mut encoder = zstd::Encoder::new(Vec::new(), level)?;
+
+    encoder.set_pledged_src_size(Some(input.len() as u64))?;
+    encoder.include_contentsize(true)?;
+
+    encoder.write_all(input)?;
+
+    Ok(encoder.finish()?)
 }
