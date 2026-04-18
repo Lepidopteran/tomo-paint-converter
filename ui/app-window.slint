@@ -1,0 +1,183 @@
+import {
+    Button,
+    Spinner,
+    VerticalBox,
+    GridBox,
+    HorizontalBox,
+    ComboBox,
+    Palette,
+    LineEdit,
+    StyleMetrics,
+} from "std-widgets.slint";
+
+import { FilePickerInput } from "./inputs.slint";
+import { LabelBox } from "inputs.slint";
+
+struct CompressionSettings {
+    enabled: bool,
+    level: int,
+}
+
+export component AppWindow inherits Window {
+    in property <bool> file-dialog-opened;
+    in property <bool> loading;
+    in property <bool> image-loaded;
+    in property <[string]> viewer-mode-model;
+    in property <[string]> texture-type-model;
+    in property <string> output-folder-path;
+    in property <string> input-path;
+    in property <CompressionSettings> compression-settings;
+
+    callback pick_file_input();
+    callback pick_file_output();
+    callback pick_folder_output();
+    callback export_button_clicked();
+    callback viewer_mode_changed(string);
+    callback texture_type_changed(string);
+
+    min-width: 600px;
+    min-height: 300px;
+    HorizontalLayout {
+        visible: image-loaded;
+        VerticalLayout {
+            horizontal-stretch: 1;
+            Rectangle {
+                background: Palette.alternate-background;
+                HorizontalBox {
+                    alignment: end;
+
+                    ComboBox {
+                        model: viewer-mode-model;
+                        selected(current-value) => {
+                            viewer_mode_changed(current-value);
+                        }
+                    }
+                }
+            }
+
+            VerticalLayout {
+
+                Image {
+                    vertical-stretch: 1;
+                }
+            }
+        }
+
+        Rectangle {
+            background: Palette.alternate-background;
+            VerticalBox {
+                horizontal-stretch: 0;
+                alignment: space-between;
+                VerticalBox {
+                    alignment: start;
+                    LabelBox {
+                        label: "Input";
+                        FilePickerInput {
+                            path: input-path;
+                            enabled: !loading;
+                            pick-requested => {
+                                pick_file_input();
+                            }
+                        }
+                    }
+
+                    LabelBox {
+                        label: "Texture Type";
+                        ComboBox {
+                            model: texture-type-model;
+                            selected(current-value) => {
+                                texture_type_changed(current-value);
+                            }
+                        }
+                    }
+
+                    LabelBox {
+                        label: "Output Directory";
+                        FilePickerInput {
+                            path: output-folder-path;
+                            enabled: !loading;
+                            pick-requested => {
+                                pick_folder_output();
+                            }
+                        }
+                    }
+                }
+
+                Button {
+                    text: "Export";
+                    primary: !loading && !file-dialog-opened;
+                    enabled: !loading;
+                    clicked => {
+                        export_button_clicked();
+                    };
+                }
+            }
+        }
+    }
+
+    VerticalBox {
+        y: image-loaded ? root.height : 0;
+        opacity: image-loaded ? 0 : 1;
+        alignment: center;
+        spacing: 0.5rem;
+
+        animate y {
+            duration: 0.5s;
+            easing: ease-in-out;
+        }
+        animate opacity {
+            duration: 0.25s;
+            easing: ease-in-out;
+        }
+
+        Text {
+            text: "Tomo Paint Converter";
+            font-weight: 900;
+            font-size: 1.5rem;
+            horizontal-alignment: center;
+        }
+
+        VerticalBox {
+            alignment: center;
+            spacing: 0.5rem;
+
+            Text {
+                text: "Import image or texture to convert";
+                horizontal-alignment: center;
+            }
+
+            Button {
+                enabled: !loading && !image-loaded;
+                colorize-icon: true;
+                icon: @image-url("images/folder.svg");
+                icon-size: 1.25rem;
+                text: "Choose File";
+                primary: true;
+                clicked => {
+                    self.enabled = false;
+                    pick_file_input();
+                };
+            }
+        }
+    }
+
+    Rectangle {
+        opacity: 0.5;
+        background: black;
+        visible: loading;
+
+        VerticalBox {
+            alignment: center;
+            loading-spinner := Spinner {
+                preferred-width: 3rem;
+                horizontal-stretch: 0;
+            }
+
+            loading-text := Text {
+                text: "Loading...";
+                vertical-alignment: center;
+                horizontal-alignment: center;
+            }
+        }
+    }
+}
