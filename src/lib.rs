@@ -7,6 +7,9 @@ use tegra_swizzle::{
 };
 use texpresso::Params;
 
+mod resize;
+pub use resize::*;
+
 pub const TEXTURE_SIZE: u32 = 512;
 pub const FOOD_SIZE: u32 = 384;
 pub const THUMBNAIL_SIZE: u32 = 256;
@@ -16,54 +19,6 @@ const DEPTH: u32 = 1;
 const UNCOMPRESSED_BLOCK_SIZE: u32 = 4;
 const BC1_BLOCK_SIZE: u32 = 8;
 const BC3_BLOCK_SIZE: u32 = 16;
-
-#[derive(clap::ValueEnum, Debug, Clone, Copy)]
-pub enum ResizeType {
-    /// Preserve image aspect ratio
-    Preserve,
-    /// Fill image preserving aspect ratio and cropping
-    Fill,
-    /// Resize image to exact size, ignoring aspect ratio
-    Exact,
-}
-
-#[derive(clap::ValueEnum, Debug, Clone, Copy)]
-pub enum ResizeFilter {
-    /// Nearest neighbor
-    Nearest,
-    /// Bilinear
-    Bilinear,
-    /// Catmull-Rom
-    CatmullRom,
-    /// Gaussian
-    Gaussian,
-    /// Lanczos
-    Lanczos3,
-}
-
-impl From<FilterType> for ResizeFilter {
-    fn from(value: FilterType) -> Self {
-        match value {
-            FilterType::Nearest => Self::Nearest,
-            FilterType::Triangle => Self::Bilinear,
-            FilterType::CatmullRom => Self::CatmullRom,
-            FilterType::Gaussian => Self::Gaussian,
-            FilterType::Lanczos3 => Self::Lanczos3,
-        }
-    }
-}
-
-impl From<ResizeFilter> for FilterType {
-    fn from(value: ResizeFilter) -> Self {
-        match value {
-            ResizeFilter::Nearest => FilterType::Nearest,
-            ResizeFilter::Bilinear => FilterType::Triangle,
-            ResizeFilter::CatmullRom => FilterType::CatmullRom,
-            ResizeFilter::Gaussian => FilterType::Gaussian,
-            ResizeFilter::Lanczos3 => FilterType::Lanczos3,
-        }
-    }
-}
 
 /// Output type of texture
 #[derive(clap::ValueEnum, Debug, Clone, Copy, Eq, PartialEq)]

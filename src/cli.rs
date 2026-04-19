@@ -59,11 +59,6 @@ pub enum Command {
     },
 }
 
-impl Command {
-    pub fn run(self) {
-        run(self)
-    }
-}
 pub fn run(command: Command) {
     match command {
         Command::Compress {
@@ -115,7 +110,7 @@ pub fn run(command: Command) {
             number,
             skip_compression,
             compression_level,
-            resize_method: resize,
+            resize_method,
         } => {
             let image = image::open(&input).expect("Failed to read input");
 
@@ -127,17 +122,7 @@ pub fn run(command: Command) {
                     TEXTURE_SIZE
                 };
 
-                let resized = match resize {
-                    ResizeType::Preserve => {
-                        image.resize(size, size, image::imageops::FilterType::Nearest)
-                    }
-                    ResizeType::Fill => {
-                        image.resize_to_fill(size, size, image::imageops::FilterType::Nearest)
-                    }
-                    ResizeType::Exact => {
-                        image.resize_exact(size, size, image::imageops::FilterType::Nearest)
-                    }
-                };
+                let resized = resize_image(&image, size, resize_method, ResizeFilter::Nearest);
 
                 let bytes = texture_from_image(&resized, output_type == PaintType::Food)
                     .expect("Failed to encode texture");
@@ -164,23 +149,8 @@ pub fn run(command: Command) {
             }
 
             if output_type.has_canvas() {
-                let resized = match resize {
-                    ResizeType::Preserve => image.resize(
-                        CANVAS_SIZE,
-                        CANVAS_SIZE,
-                        image::imageops::FilterType::Nearest,
-                    ),
-                    ResizeType::Fill => image.resize_to_fill(
-                        CANVAS_SIZE,
-                        CANVAS_SIZE,
-                        image::imageops::FilterType::Nearest,
-                    ),
-                    ResizeType::Exact => image.resize_exact(
-                        CANVAS_SIZE,
-                        CANVAS_SIZE,
-                        image::imageops::FilterType::Nearest,
-                    ),
-                };
+                let resized =
+                    resize_image(&image, CANVAS_SIZE, resize_method, ResizeFilter::Nearest);
 
                 let bytes = canvas_from_image(&resized).expect("Failed to encode canvas");
                 if skip_compression {
@@ -211,23 +181,8 @@ pub fn run(command: Command) {
 
                 thumbnail_path.push(stem);
 
-                let resized = match resize {
-                    ResizeType::Preserve => image.resize(
-                        THUMBNAIL_SIZE,
-                        THUMBNAIL_SIZE,
-                        image::imageops::FilterType::Nearest,
-                    ),
-                    ResizeType::Fill => image.resize_to_fill(
-                        THUMBNAIL_SIZE,
-                        THUMBNAIL_SIZE,
-                        image::imageops::FilterType::Nearest,
-                    ),
-                    ResizeType::Exact => image.resize_exact(
-                        THUMBNAIL_SIZE,
-                        THUMBNAIL_SIZE,
-                        image::imageops::FilterType::Nearest,
-                    ),
-                };
+                let resized =
+                    resize_image(&image, THUMBNAIL_SIZE, resize_method, ResizeFilter::Nearest);
 
                 let bytes = thumbnail_from_image(&resized).expect("Failed to encode thumbnail");
 
