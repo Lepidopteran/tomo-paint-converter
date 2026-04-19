@@ -1,6 +1,7 @@
 use std::{fmt::Display, io::Write, str::FromStr};
 
-use image::{DynamicImage, ImageBuffer, RgbaImage, imageops::FilterType};
+use image::{DynamicImage, ImageBuffer, RgbaImage};
+use slint::{SharedString, VecModel};
 use tegra_swizzle::{
     block_height_mip0, div_round_up,
     swizzle::{deswizzle_block_linear, swizzle_block_linear},
@@ -59,17 +60,22 @@ impl PaintType {
         true
     }
 
-    pub fn variants() -> Vec<String> {
-        vec![
-            PaintType::FacePaint.to_string(),
-            PaintType::Food.to_string(),
-            PaintType::Interior.to_string(),
-            PaintType::Exterior.to_string(),
-            PaintType::Treasure.to_string(),
-            PaintType::Cloth.to_string(),
-            PaintType::Terrain.to_string(),
-            PaintType::Object.to_string(),
-        ]
+    pub fn model() -> VecModel<SharedString> {
+        VecModel::from(
+            vec![
+                PaintType::FacePaint.to_string(),
+                PaintType::Food.to_string(),
+                PaintType::Interior.to_string(),
+                PaintType::Exterior.to_string(),
+                PaintType::Treasure.to_string(),
+                PaintType::Cloth.to_string(),
+                PaintType::Terrain.to_string(),
+                PaintType::Object.to_string(),
+            ]
+            .into_iter()
+            .map(|s| s.into())
+            .collect::<Vec<_>>(),
+        )
     }
 }
 

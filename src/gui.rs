@@ -1,11 +1,12 @@
-use std::{cell::RefCell, io::Cursor, rc::Rc};
+use std::{cell::RefCell, fmt::Display, io::Cursor, rc::Rc, str::FromStr};
 
 use color_eyre::eyre::Result;
 use image::ImageReader;
 use rfd::AsyncFileDialog;
-use slint::{Image, ModelRc, Rgba8Pixel, SharedPixelBuffer, VecModel};
+use slint::{Image, ModelRc, Rgba8Pixel, SharedPixelBuffer, SharedString, VecModel};
 use tomo_image_converter::{
-    PaintType, image_from_canvas, image_from_texture, image_from_thumbnail,
+    PaintType, ResizeFilter, ResizeType, image_from_canvas, image_from_texture,
+    image_from_thumbnail,
 };
 
 const ALL_FORMATS: &[&str] = &[
@@ -39,6 +40,50 @@ const TEXTURE_FORMATS: &[&str] = &["canvas", "ugctex", "ugctex.zs", "canvas.zs"]
 
 slint::include_modules!();
 
+#[derive(Debug, Clone, Copy)]
+enum PreviewType {
+    Source,
+    Texture,
+    Canvas,
+    Thumbnail,
+}
+
+impl PreviewType {
+    fn model() -> VecModel<SharedString> {
+        VecModel::from(vec![
+            PreviewType::Source.to_string().into(),
+            PreviewType::Texture.to_string().into(),
+            PreviewType::Canvas.to_string().into(),
+            PreviewType::Thumbnail.to_string().into(),
+        ])
+    }
+}
+
+impl Display for PreviewType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            PreviewType::Source => "Source",
+            PreviewType::Texture => "Texture",
+            PreviewType::Canvas => "Canvas",
+            PreviewType::Thumbnail => "Thumbnail",
+        })
+    }
+}
+
+impl FromStr for PreviewType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().replace(" ", "").as_str() {
+            "source" => Ok(PreviewType::Source),
+            "texture" => Ok(PreviewType::Texture),
+            "canvas" => Ok(PreviewType::Canvas),
+            "thumbnail" => Ok(PreviewType::Thumbnail),
+            _ => Err(format!("Invalid preview type: {}", s)),
+        }
+    }
+}
+
 type Rgba8Buffer = SharedPixelBuffer<Rgba8Pixel>;
 
 #[derive(Default)]
@@ -59,12 +104,10 @@ pub fn run() -> Result<()> {
     let app = AppWindow::new()?;
     let state = Rc::new(RefCell::new(State::default()));
 
-    app.set_texture_type_model(ModelRc::new(VecModel::from(
-        PaintType::variants()
-            .into_iter()
-            .map(|s| s.into())
-            .collect::<Vec<_>>(),
-    )));
+    app.set_texture_type_model(ModelRc::new(PaintType::model()));
+    app.set_resize_filter_model(ModelRc::new(ResizeFilter::model()));
+    app.set_resize_method_model(ModelRc::new(ResizeType::model()));
+    app.set_viewer_mode_model(ModelRc::new(PreviewType::model()));
 
     let weak_app = app.as_weak();
     let state_ref = state.clone();

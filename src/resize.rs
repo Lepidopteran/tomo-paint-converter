@@ -1,6 +1,7 @@
 use std::{fmt::Display, str::FromStr};
 
 use image::{DynamicImage, GenericImage, ImageBuffer, Rgba, imageops::FilterType};
+use slint::{SharedString, VecModel};
 
 #[derive(clap::ValueEnum, Debug, Clone, Copy)]
 pub enum ResizeType {
@@ -10,6 +11,16 @@ pub enum ResizeType {
     Fill,
     /// Resize image to exact size, ignoring aspect ratio
     Exact,
+}
+
+impl ResizeType {
+    pub fn model() -> VecModel<SharedString> {
+        VecModel::from(vec![
+            ResizeType::Preserve.to_string().into(),
+            ResizeType::Fill.to_string().into(),
+            ResizeType::Exact.to_string().into(),
+        ])
+    }
 }
 
 impl Display for ResizeType {
@@ -46,6 +57,18 @@ pub enum ResizeFilter {
     Gaussian,
     /// Lanczos
     Lanczos3,
+}
+
+impl ResizeFilter {
+    pub fn model() -> VecModel<SharedString> {
+        VecModel::from(vec![
+            ResizeFilter::Nearest.to_string().into(),
+            ResizeFilter::Bilinear.to_string().into(),
+            ResizeFilter::CatmullRom.to_string().into(),
+            ResizeFilter::Gaussian.to_string().into(),
+            ResizeFilter::Lanczos3.to_string().into(),
+        ])
+    }
 }
 
 impl From<FilterType> for ResizeFilter {
