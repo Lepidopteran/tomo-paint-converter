@@ -51,10 +51,10 @@ enum PreviewType {
 impl PreviewType {
     fn model() -> VecModel<SharedString> {
         VecModel::from(vec![
-            PreviewType::Source.to_string().into(),
             PreviewType::Texture.to_string().into(),
             PreviewType::Canvas.to_string().into(),
             PreviewType::Thumbnail.to_string().into(),
+            PreviewType::Source.to_string().into(),
         ])
     }
 }
@@ -109,18 +109,38 @@ pub fn run() -> Result<()> {
     app.set_resize_method_model(ModelRc::new(ResizeType::model()));
     app.set_viewer_mode_model(ModelRc::new(PreviewType::model()));
 
-    let weak_app = app.as_weak();
+    let app_ref = app.as_weak();
     let state_ref = state.clone();
+
     app.on_pick_file_input(move || {
-        let weak_app = weak_app.clone();
+        let app_ref = app_ref.clone();
         let state = state_ref.clone();
         slint::spawn_local(async move {
-            handle_file_input(weak_app.upgrade().expect("Couldn't get app"), state).await;
+            handle_file_input(app_ref.upgrade().expect("Couldn't get app"), state).await;
+        })
+        .unwrap();
+    });
+
+    let app_ref = app.as_weak();
+
+    app.on_pick_folder_output(move || {
+        let weak_app = app_ref.clone();
+        slint::spawn_local(async move {
+            handle_output_folder(weak_app.upgrade().expect("Couldn't get app")).await;
         })
         .unwrap();
     });
 
     Ok(app.run()?)
+}
+
+async fn handle_output_folder(app: AppWindow) {
+    app.set_file_dialog_opened(true);
+    let file = file_dialog("Pick a folder").pick_folder().await;
+
+    if let Some(file) = file {
+        app.set_output_folder_path(file.path().to_string_lossy().to_string().into());
+    }
 }
 
 async fn handle_file_input(app: AppWindow, state: Rc<RefCell<State>>) {
