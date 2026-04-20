@@ -24,6 +24,15 @@ export component FilePickerInput {
     in property <bool> enabled: true;
 
     callback pick-requested;
+    forward-focus: key-handler;
+    key-handler := FocusScope {
+        KeyBinding {
+            keys: @keys(Space);
+            activated => {
+                root.pick-requested();
+            }
+        }
+    }
 
     Rectangle {
         clip: true;
@@ -62,6 +71,7 @@ export component FilePickerInput {
                     Text {
                         text: root.path;
                         vertical-alignment: center;
+                        horizontal-alignment: right;
                         overflow: elide;
                     }
                 }
