@@ -26,6 +26,7 @@ export component AppWindow inherits Window {
     in property <bool> file-dialog-opened;
     in property <bool> loading;
     in property <bool> image-loaded;
+    in property <bool> processing-image;
     in property <[string]> viewer-mode-model;
     in property <[string]> texture-type-model;
     in property <[string]> resize-method-model;
@@ -46,6 +47,7 @@ export component AppWindow inherits Window {
     callback pick_file_output();
     callback pick_folder_output();
     callback export_button_clicked();
+    callback update_preview();
 
     title: "Tomo Paint Converter";
     min-width: 800px;
@@ -74,27 +76,55 @@ export component AppWindow inherits Window {
                 }
             }
 
-            VerticalLayout {
-                alignment: center;
-                Image {
-                    vertical-stretch: 1;
-                    source: viewer-image;
-                }
-            }
+            Rectangle {
+                vertical-stretch: 1;
 
-            HorizontalLayout {
-                alignment: start;
-                padding: 0.5rem;
-                spacing: 0.5rem;
-                Text {
-                    text: viewer-image.width + "x" + viewer-image.height;
-                    vertical-alignment: center;
+                Rectangle {
+                    background: black;
+                    opacity: 0.5;
+                    visible: processing-image;
+                    VerticalBox {
+                        alignment: center;
+                        Spinner {
+                            indeterminate: true;
+                            preferred-width: 3rem;
+                            horizontal-stretch: 0;
+                        }
+
+                        Text {
+                            text: "Processing Image...";
+                            vertical-alignment: center;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+
+                GridLayout {
+                    Row {
+                        Image {
+                            vertical-stretch: 1;
+                            source: viewer-image;
+                        }
+                    }
+
+                    Row {
+                        HorizontalLayout {
+                            alignment: start;
+                            padding: 0.5rem;
+                            spacing: 0.5rem;
+                            Text {
+                                text: viewer-image.width + "x" + viewer-image.height;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
                 }
             }
         }
 
         Rectangle {
             background: Palette.alternate-background;
+            preferred-width: 300px;
             VerticalBox {
                 horizontal-stretch: 0;
                 alignment: space-between;
@@ -116,6 +146,7 @@ export component AppWindow inherits Window {
                         ComboBox {
                             model: texture-type-model;
                             current-value <=> texture-type;
+                            selected() => update_preview();
                         }
                     }
 
@@ -133,6 +164,7 @@ export component AppWindow inherits Window {
                         ComboBox {
                             model: resize-method-model;
                             current-value <=> resize-method;
+                            selected() => update_preview();
                         }
                     }
 
@@ -141,6 +173,7 @@ export component AppWindow inherits Window {
                         ComboBox {
                             model: resize-filter-model;
                             current-value <=> resize-filter;
+                            selected() => update_preview();
                         }
                     }
 
