@@ -17,9 +17,71 @@ pub const THUMBNAIL_SIZE: u32 = 256;
 pub const CANVAS_SIZE: u32 = 256;
 
 const DEPTH: u32 = 1;
+const ENCODED_BYTE_DIVIDER: u32 = 4;
 const UNCOMPRESSED_BLOCK_SIZE: u32 = 4;
 const BC1_BLOCK_SIZE: u32 = 8;
 const BC3_BLOCK_SIZE: u32 = 16;
+
+/// The format of the texture.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum TextureFormatter {
+    Bc1,
+    Bc3,
+    Uncompressed,
+}
+
+impl TextureFormatter {
+    pub fn block_size(&self) -> u32 {
+        match self {
+            Self::Bc1 => BC1_BLOCK_SIZE,
+            Self::Bc3 => BC3_BLOCK_SIZE,
+            Self::Uncompressed => UNCOMPRESSED_BLOCK_SIZE,
+        }
+    }
+
+    pub fn compress(&self, bytes: &[u8], size: u32) -> color_eyre::Result<Vec<u8>> {
+        Ok(match self {
+            Self::Bc1 => bc1_compress_bytes(size, bytes)?,
+            Self::Bc3 => bc3_compress_bytes(size, bytes)?,
+            Self::Uncompressed => bytes.to_vec(),
+        })
+    }
+
+    pub fn swizzle(&self, bytes: &[u8], size: u32) -> color_eyre::Result<Vec<u8>> {
+        Ok(match self {
+            Self::Bc1 => {
+                let divided_size = div_round_up(size, ENCODED_BYTE_DIVIDER);
+                deswizzle_block_linear(
+                    divided_size,
+                    divided_size,
+                    DEPTH,
+                    bytes,
+                    block_height_mip0(divided_size),
+                    BC1_BLOCK_SIZE,
+                )
+            }
+            Self::Bc3 => {
+                let divided_size = div_round_up(size, ENCODED_BYTE_DIVIDER);
+                deswizzle_block_linear(
+                    divided_size,
+                    divided_size,
+                    DEPTH,
+                    bytes,
+                    block_height_mip0(divided_size),
+                    BC3_BLOCK_SIZE,
+                )
+            }
+            Self::Uncompressed => deswizzle_block_linear(
+                size,
+                size,
+                DEPTH,
+                bytes,
+                block_height_mip0(size),
+                UNCOMPRESSED_BLOCK_SIZE,
+            ),
+        }?)
+    }
+}
 
 /// Output type of texture
 #[derive(clap::ValueEnum, Debug, Clone, Copy, Eq, PartialEq)]
@@ -158,31 +220,6 @@ pub fn image_from_canvas(bytes: &[u8]) -> color_eyre::Result<DynamicImage> {
     Ok(DynamicImage::ImageRgba8(buffer))
 }
 
-pub fn canvas_from_image(image: &DynamicImage) -> color_eyre::Result<Vec<u8>> {
-    let rgba_image = image.to_rgba8();
-
-    Ok(swizzle_block_linear(
-        CANVAS_SIZE,
-        CANVAS_SIZE,
-        1,
-        rgba_image.as_raw(),
-        block_height_mip0(CANVAS_SIZE),
-        UNCOMPRESSED_BLOCK_SIZE,
-    )?)
-}
-
-pub fn thumbnail_from_image(image: &DynamicImage) -> color_eyre::Result<Vec<u8>> {
-    let compressed_size = div_round_up(THUMBNAIL_SIZE, 4);
-    Ok(swizzle_block_linear(
-        compressed_size,
-        compressed_size,
-        DEPTH,
-        &bc3_compress_bytes(THUMBNAIL_SIZE, image.to_rgba8().as_raw())?,
-        block_height_mip0(compressed_size),
-        BC3_BLOCK_SIZE,
-    )?)
-}
-
 pub fn image_from_thumbnail(bytes: &[u8]) -> color_eyre::Result<DynamicImage> {
     let size = div_round_up(THUMBNAIL_SIZE, 4);
 
@@ -234,20 +271,6 @@ pub fn image_from_texture(bytes: &[u8], food: bool) -> color_eyre::Result<Dynami
     Ok(DynamicImage::ImageRgba8(
         RgbaImage::from_raw(size, size, rgba_buffer).expect("Failed to create rgba image"),
     ))
-}
-
-pub fn texture_from_image(image: &DynamicImage, food: bool) -> color_eyre::Result<Vec<u8>> {
-    let size = if food { FOOD_SIZE } else { TEXTURE_SIZE };
-
-    let compressed_size = div_round_up(size, 4);
-    Ok(swizzle_block_linear(
-        compressed_size,
-        compressed_size,
-        1,
-        &bc1_compress_bytes(size, image.to_rgba8().as_raw())?,
-        block_height_mip0(compressed_size),
-        BC1_BLOCK_SIZE,
-    )?)
 }
 
 pub fn compress(input: &[u8], level: i32) -> color_eyre::Result<Vec<u8>> {

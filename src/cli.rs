@@ -5,6 +5,7 @@ use std::{
 };
 
 use clap::Subcommand;
+use image::EncodableLayout;
 use tomo_image_converter::*;
 
 const DEFAULT_COMPRESSION_LEVEL: i32 = 19;
@@ -124,8 +125,13 @@ pub fn run(command: Command) {
 
                 let resized = resize_image(&image, size, resize_method, ResizeFilter::Nearest);
 
-                let bytes = texture_from_image(&resized, output_type == PaintType::Food)
-                    .expect("Failed to encode texture");
+                let formatter = TextureFormatter::Bc1;
+                let compressed = formatter
+                    .compress(resized.to_rgba8().as_bytes(), size)
+                    .expect("Failed to compress");
+                let swizzled = formatter
+                    .swizzle(&compressed, size)
+                    .expect("Failed to swizzle bytes");
 
                 let mut texture_path = output_dir.clone();
                 texture_path.push(&file_stem);
@@ -134,12 +140,13 @@ pub fn run(command: Command) {
                     texture_path.set_extension("ugctex");
                     let mut file =
                         std::fs::File::create(&texture_path).expect("Failed to create file");
-                    file.write_all(&bytes).expect("Failed to write texture");
+                    file.write_all(&swizzled).expect("Failed to write texture");
 
                     return;
                 }
 
-                let compressed = compress(&bytes, compression_level).expect("Failed to compress");
+                let compressed =
+                    compress(&swizzled, compression_level).expect("Failed to compress");
 
                 texture_path.set_extension("ugctex.zs");
 
@@ -152,7 +159,11 @@ pub fn run(command: Command) {
                 let resized =
                     resize_image(&image, CANVAS_SIZE, resize_method, ResizeFilter::Nearest);
 
-                let bytes = canvas_from_image(&resized).expect("Failed to encode canvas");
+                let formatter = TextureFormatter::Uncompressed;
+                let bytes = formatter
+                    .swizzle(resized.to_rgba8().as_bytes(), CANVAS_SIZE)
+                    .expect("Failed to swizzle canvas");
+
                 if skip_compression {
                     let mut canvas_path = output_dir.clone();
                     canvas_path.push(&file_stem);
@@ -184,17 +195,26 @@ pub fn run(command: Command) {
                 let resized =
                     resize_image(&image, THUMBNAIL_SIZE, resize_method, ResizeFilter::Nearest);
 
-                let bytes = thumbnail_from_image(&resized).expect("Failed to encode thumbnail");
+                let formatter = TextureFormatter::Bc3;
+
+                let encoded = formatter
+                    .compress(resized.to_rgba8().as_bytes(), THUMBNAIL_SIZE)
+                    .expect("Could not encode bytes");
+                let swizzled = formatter
+                    .swizzle(&encoded, THUMBNAIL_SIZE)
+                    .expect("Could not swizzle bytes");
 
                 if skip_compression {
                     thumbnail_path.set_extension("ugctex");
                     let mut file =
                         std::fs::File::create(&thumbnail_path).expect("Failed to create file");
-                    file.write_all(&bytes).expect("Failed to write thumbnail");
+                    file.write_all(&swizzled)
+                        .expect("Failed to write thumbnail");
                     return;
                 }
 
-                let compressed = compress(&bytes, compression_level).expect("Failed to compress");
+                let compressed =
+                    compress(&swizzled, compression_level).expect("Failed to compress");
 
                 thumbnail_path.set_extension("ugctex.zs");
                 let mut file =
