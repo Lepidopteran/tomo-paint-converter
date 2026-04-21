@@ -274,7 +274,7 @@ pub fn image_from_texture(bytes: &[u8], food: bool) -> color_eyre::Result<Dynami
     ))
 }
 
-pub fn compress(input: &[u8], level: i32) -> color_eyre::Result<Vec<u8>> {
+pub fn zstd_compress_bytes(input: &[u8], level: i32) -> color_eyre::Result<Vec<u8>> {
     let mut encoder = zstd::Encoder::new(Vec::new(), level)?;
 
     encoder.set_pledged_src_size(Some(input.len() as u64))?;

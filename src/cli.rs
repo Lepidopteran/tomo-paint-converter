@@ -68,7 +68,8 @@ pub fn run(command: Command) {
             compression_level: level,
         } => {
             let input_bytes = read(&input).expect("Failed to read input");
-            let compressed_bytes = compress(&input_bytes, level).expect("Failed to compress file");
+            let compressed_bytes =
+                zstd_compress_bytes(&input_bytes, level).expect("Failed to compress file");
 
             write(&output, compressed_bytes).expect("Failed to write output");
         }
@@ -146,7 +147,7 @@ pub fn run(command: Command) {
                 }
 
                 let compressed =
-                    compress(&swizzled, compression_level).expect("Failed to compress");
+                    zstd_compress_bytes(&swizzled, compression_level).expect("Failed to compress");
 
                 texture_path.set_extension("ugctex.zs");
 
@@ -175,7 +176,8 @@ pub fn run(command: Command) {
                     return;
                 }
 
-                let compressed = compress(&bytes, compression_level).expect("Failed to compress");
+                let compressed =
+                    zstd_compress_bytes(&bytes, compression_level).expect("Failed to compress");
 
                 let mut canvas_path = output_dir.clone();
                 canvas_path.push(&file_stem);
@@ -214,7 +216,7 @@ pub fn run(command: Command) {
                 }
 
                 let compressed =
-                    compress(&swizzled, compression_level).expect("Failed to compress");
+                    zstd_compress_bytes(&swizzled, compression_level).expect("Failed to compress");
 
                 thumbnail_path.set_extension("ugctex.zs");
                 let mut file =
