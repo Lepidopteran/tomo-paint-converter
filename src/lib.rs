@@ -51,7 +51,7 @@ impl TextureFormatter {
         Ok(match self {
             Self::Bc1 => {
                 let divided_size = div_round_up(size, ENCODED_BYTE_DIVIDER);
-                deswizzle_block_linear(
+                swizzle_block_linear(
                     divided_size,
                     divided_size,
                     DEPTH,
@@ -62,7 +62,7 @@ impl TextureFormatter {
             }
             Self::Bc3 => {
                 let divided_size = div_round_up(size, ENCODED_BYTE_DIVIDER);
-                deswizzle_block_linear(
+                swizzle_block_linear(
                     divided_size,
                     divided_size,
                     DEPTH,
@@ -71,7 +71,7 @@ impl TextureFormatter {
                     BC3_BLOCK_SIZE,
                 )
             }
-            Self::Uncompressed => deswizzle_block_linear(
+            Self::Uncompressed => swizzle_block_linear(
                 size,
                 size,
                 DEPTH,
