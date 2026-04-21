@@ -8,6 +8,7 @@ use tegra_swizzle::{
 };
 use texpresso::Params;
 
+mod pipeline;
 mod resize;
 pub use resize::*;
 
@@ -17,10 +18,10 @@ pub const THUMBNAIL_SIZE: u32 = 256;
 pub const CANVAS_SIZE: u32 = 256;
 
 const DEPTH: u32 = 1;
-const ENCODED_BYTE_DIVIDER: u32 = 4;
-const UNCOMPRESSED_BLOCK_SIZE: u32 = 4;
-const BC1_BLOCK_SIZE: u32 = 8;
-const BC3_BLOCK_SIZE: u32 = 16;
+const BLOCK_SIZE: u32 = 4;
+const UNCOMPRESSED_BYTE_SIZE: u32 = 4;
+const BC1_BYTE_SIZE: u32 = 8;
+const BC3_BYTE_SIZE: u32 = 16;
 
 /// The format of the texture.
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -33,9 +34,9 @@ pub enum TextureFormatter {
 impl TextureFormatter {
     pub fn block_size(&self) -> u32 {
         match self {
-            Self::Bc1 => BC1_BLOCK_SIZE,
-            Self::Bc3 => BC3_BLOCK_SIZE,
-            Self::Uncompressed => UNCOMPRESSED_BLOCK_SIZE,
+            Self::Bc1 => BC1_BYTE_SIZE,
+            Self::Bc3 => BC3_BYTE_SIZE,
+            Self::Uncompressed => UNCOMPRESSED_BYTE_SIZE,
         }
     }
 
@@ -50,25 +51,25 @@ impl TextureFormatter {
     pub fn swizzle(&self, bytes: &[u8], size: u32) -> color_eyre::Result<Vec<u8>> {
         Ok(match self {
             Self::Bc1 => {
-                let divided_size = div_round_up(size, ENCODED_BYTE_DIVIDER);
+                let divided_size = div_round_up(size, BLOCK_SIZE);
                 swizzle_block_linear(
                     divided_size,
                     divided_size,
                     DEPTH,
                     bytes,
                     block_height_mip0(divided_size),
-                    BC1_BLOCK_SIZE,
+                    BC1_BYTE_SIZE,
                 )
             }
             Self::Bc3 => {
-                let divided_size = div_round_up(size, ENCODED_BYTE_DIVIDER);
+                let divided_size = div_round_up(size, BLOCK_SIZE);
                 swizzle_block_linear(
                     divided_size,
                     divided_size,
                     DEPTH,
                     bytes,
                     block_height_mip0(divided_size),
-                    BC3_BLOCK_SIZE,
+                    BC3_BYTE_SIZE,
                 )
             }
             Self::Uncompressed => swizzle_block_linear(
@@ -77,7 +78,7 @@ impl TextureFormatter {
                 DEPTH,
                 bytes,
                 block_height_mip0(size),
-                UNCOMPRESSED_BLOCK_SIZE,
+                UNCOMPRESSED_BYTE_SIZE,
             ),
         }?)
     }
@@ -211,7 +212,7 @@ pub fn image_from_canvas(bytes: &[u8]) -> color_eyre::Result<DynamicImage> {
         DEPTH,
         bytes,
         block_height_mip0(CANVAS_SIZE),
-        UNCOMPRESSED_BLOCK_SIZE,
+        UNCOMPRESSED_BYTE_SIZE,
     )?;
 
     let buffer = ImageBuffer::from_raw(CANVAS_SIZE, CANVAS_SIZE, deswizzled_bytes)
@@ -225,7 +226,7 @@ pub fn image_from_thumbnail(bytes: &[u8]) -> color_eyre::Result<DynamicImage> {
 
     let block_height = block_height_mip0(size);
     let deswizzled_bytes =
-        deswizzle_block_linear(size, size, 1, bytes, block_height, BC3_BLOCK_SIZE)?;
+        deswizzle_block_linear(size, size, 1, bytes, block_height, BC3_BYTE_SIZE)?;
 
     let bc3 = texpresso::Format::Bc3;
     let mut rgba_buffer: Vec<u8> = vec![0; THUMBNAIL_SIZE as usize * THUMBNAIL_SIZE as usize * 4];
@@ -255,7 +256,7 @@ pub fn image_from_texture(bytes: &[u8], food: bool) -> color_eyre::Result<Dynami
         1,
         bytes,
         block_height,
-        BC1_BLOCK_SIZE,
+        BC1_BYTE_SIZE,
     )?;
 
     let bc1 = texpresso::Format::Bc1;
