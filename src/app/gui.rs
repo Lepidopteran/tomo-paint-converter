@@ -5,9 +5,15 @@ use image::ImageReader;
 use rfd::AsyncFileDialog;
 use slint::{Image, ModelRc, Rgba8Pixel, SharedPixelBuffer, SharedString, VecModel};
 use tomo_image_converter::{
-    PaintType, ResizeFilter, ResizeType, image_from_canvas, image_from_texture,
-    image_from_thumbnail,
+    CANVAS_SIZE, FOOD_SIZE, TEXTURE_SIZE, THUMBNAIL_SIZE, Texture,
+    texture::{
+        codecs::bcn::{BcFormat, BcTextureDecoder},
+        resize::{ResizeFilter, ResizeType},
+        tegra::{TegraDecoder, TegraTextureDecoder, deswizzle_uncompressed_bytes},
+    },
 };
+
+use crate::app::{PaintType, enum_to_model};
 
 const ALL_FORMATS: &[&str] = &[
     "avif",
@@ -104,9 +110,9 @@ pub fn run() -> Result<()> {
     let app = AppWindow::new()?;
     let state = Rc::new(RefCell::new(State::default()));
 
-    app.set_texture_type_model(ModelRc::new(PaintType::model()));
-    app.set_resize_filter_model(ModelRc::new(ResizeFilter::model()));
-    app.set_resize_method_model(ModelRc::new(ResizeType::model()));
+    app.set_texture_type_model(ModelRc::new(enum_to_model::<PaintType>()));
+    app.set_resize_filter_model(ModelRc::new(enum_to_model::<ResizeFilter>()));
+    app.set_resize_method_model(ModelRc::new(enum_to_model::<ResizeType>()));
     app.set_viewer_mode_model(ModelRc::new(PreviewType::model()));
 
     let app_ref = app.as_weak();
@@ -191,10 +197,31 @@ async fn handle_file_input(app: AppWindow, state: Rc<RefCell<State>>) {
 
             if file_name.contains(".ugctex") {
                 let img = if file_name.contains("Thumb") {
-                    image_from_thumbnail(data).expect("Failed to read ugctex thumbnail")
+                    let decoder = BcTextureDecoder::new(BcFormat::Bc3);
+
+                    Texture::from_decoder(
+                        data.to_vec(),
+                        TegraTextureDecoder::new(decoder),
+                        THUMBNAIL_SIZE,
+                        THUMBNAIL_SIZE,
+                    )
+                    .into_image()
                 } else {
-                    image_from_texture(data, file_name.contains("Food"))
-                        .expect("Failed to read ugctex")
+                    let size = if file_name.contains("Texture") {
+                        TEXTURE_SIZE
+                    } else {
+                        FOOD_SIZE
+                    };
+
+                    let decoder = BcTextureDecoder::new(BcFormat::Bc1);
+
+                    Texture::from_decoder(
+                        data.to_vec(),
+                        TegraTextureDecoder::new(decoder),
+                        size,
+                        size,
+                    )
+                    .into_image()
                 };
 
                 let buffer = Rgba8Buffer::clone_from_slice(
@@ -206,7 +233,13 @@ async fn handle_file_input(app: AppWindow, state: Rc<RefCell<State>>) {
                 app.set_viewer_image(Image::from_rgba8(buffer.clone()));
                 state.borrow_mut().cache.source.replace(buffer);
             } else if file_name.contains(".canvas") {
-                let img = image_from_canvas(data).expect("Failed to read canvas");
+                let img = Texture::from_bytes(
+                    deswizzle_uncompressed_bytes(CANVAS_SIZE, CANVAS_SIZE, data)
+                        .expect("Failed to deswizzle"),
+                    CANVAS_SIZE,
+                    CANVAS_SIZE,
+                )
+                .into_image();
 
                 let buffer = Rgba8Buffer::clone_from_slice(
                     img.to_rgba8().as_raw(),

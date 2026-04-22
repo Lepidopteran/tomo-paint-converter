@@ -1,8 +1,8 @@
 use clap::Parser;
 use color_eyre::eyre::Result;
 
-mod cli;
-mod gui;
+mod app;
+use app::{cli, gui};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

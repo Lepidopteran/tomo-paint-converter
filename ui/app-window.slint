@@ -22,6 +22,13 @@ struct CompressionSettings {
     level: int,
 }
 
+export enum ViewerMode {
+	Texture,
+	Canvas,
+	Thumbnail,
+	Source,
+}
+
 export component AppWindow inherits Window {
     in property <bool> file-dialog-opened;
     in property <bool> loading;

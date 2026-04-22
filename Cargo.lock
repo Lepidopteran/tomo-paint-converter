@@ -4939,6 +4939,8 @@ dependencies = [
  "rfd",
  "slint",
  "slint-build",
+ "strum",
+ "strum_macros",
  "tegra_swizzle",
  "texpresso",
  "zstd",
