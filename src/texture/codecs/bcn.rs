@@ -6,8 +6,7 @@ use tegra_swizzle::{
 use texpresso::{Format, Params};
 
 use crate::texture::{
-    decode::TextureDecoder,
-    encode::TextureEncoder,
+    TextureDecoder, TextureEncoder,
     tegra::{TegraDeswizzle, TegraSwizzle},
 };
 

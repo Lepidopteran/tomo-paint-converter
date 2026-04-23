@@ -1,17 +1,9 @@
-use std::{fs::File, io::Read, path::Path};
-
 use color_eyre::eyre::Result;
 use image::{DynamicImage, EncodableLayout, ImageBuffer};
 
 pub mod codecs;
 pub mod resize;
 pub mod tegra;
-
-mod decode;
-mod encode;
-
-pub use decode::*;
-pub use encode::*;
 
 #[derive(Debug, Clone)]
 pub struct Texture {
@@ -88,4 +80,12 @@ impl Texture {
     ) -> Texture {
         resize::resize(self, nwidth, nheight, method, filter)
     }
+}
+
+pub trait TextureEncoder {
+    fn encode_texture(&self, buf: &[u8], width: u32, height: u32) -> Result<Vec<u8>>;
+}
+
+pub trait TextureDecoder {
+    fn decode_bytes(&self, data: &[u8], width: u32, height: u32) -> Result<Vec<u8>>;
 }
