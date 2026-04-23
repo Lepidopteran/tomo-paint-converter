@@ -260,7 +260,11 @@ async fn handle_file_input(app: AppWindow, state: Rc<RefCell<State>>) {
 }
 
 fn file_dialog(title: &str) -> AsyncFileDialog {
-    AsyncFileDialog::new()
-        .set_title(title)
-        .add_filter("All Files", &["*"])
+    let mut file_dialog = AsyncFileDialog::new().set_title(title);
+
+    if cfg!(target_os = "windows") || cfg!(target_os = "linux") {
+        file_dialog = file_dialog.add_filter("All files", &["*"]);
+    }
+
+    file_dialog
 }
