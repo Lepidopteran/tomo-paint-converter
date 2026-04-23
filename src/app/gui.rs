@@ -9,11 +9,11 @@ use tomo_image_converter::{
     texture::{
         codecs::bcn::{BcFormat, BcTextureDecoder},
         resize::{ResizeFilter, ResizeType},
-        tegra::{TegraDecoder, TegraTextureDecoder, deswizzle_uncompressed_bytes},
+        tegra::{TegraTextureDecoder, deswizzle_uncompressed_bytes},
     },
 };
 
-use crate::app::{PaintType, enum_to_model};
+use crate::app::{PaintType, VecEnumModel};
 
 const ALL_FORMATS: &[&str] = &[
     "avif",
@@ -103,16 +103,17 @@ struct ImageDataCache {
 #[derive(Default)]
 struct State {
     source_bytes: Vec<u8>,
+    // NOTE: Reduces the amount of resizing.
+    proxy_texture: Option<Texture>,
     cache: ImageDataCache,
 }
 
 pub fn run() -> Result<()> {
     let app = AppWindow::new()?;
     let state = Rc::new(RefCell::new(State::default()));
-
-    app.set_texture_type_model(ModelRc::new(enum_to_model::<PaintType>()));
-    app.set_resize_filter_model(ModelRc::new(enum_to_model::<ResizeFilter>()));
-    app.set_resize_method_model(ModelRc::new(enum_to_model::<ResizeType>()));
+    app.set_texture_type_model(ModelRc::new(PaintType::model()));
+    app.set_resize_filter_model(ModelRc::new(ResizeFilter::model()));
+    app.set_resize_method_model(ModelRc::new(ResizeType::model()));
     app.set_viewer_mode_model(ModelRc::new(PreviewType::model()));
 
     let app_ref = app.as_weak();

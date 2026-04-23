@@ -6,12 +6,13 @@ use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 pub mod cli;
 pub mod gui;
 
-fn enum_to_model<T>() -> VecModel<SharedString>
-where
-    T: IntoEnumIterator + Display,
-{
-    VecModel::from_iter(T::iter().map(|v| SharedString::from(v.to_string())))
+pub trait VecEnumModel: IntoEnumIterator + Display {
+    fn model() -> VecModel<SharedString> {
+        VecModel::from_iter(Self::iter().map(|v| SharedString::from(v.to_string())))
+    }
 }
+
+impl<T> VecEnumModel for T where T: IntoEnumIterator + Display {}
 
 /// Output type of texture
 #[derive(clap::ValueEnum, Debug, Clone, Copy, Eq, PartialEq, EnumString, EnumIter, Display)]
