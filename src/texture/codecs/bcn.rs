@@ -13,10 +13,10 @@ use crate::texture::{
 use super::*;
 
 pub const BLOCK_SIZE: u32 = 4;
+pub const BC1_BYTE_SIZE: u32 = 8;
+pub const BC3_BYTE_SIZE: u32 = 16;
 
 const DEPTH: u32 = 1;
-const BC1_BYTE_SIZE: u32 = 8;
-const BC3_BYTE_SIZE: u32 = 16;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, EnumIter, EnumString, Display)]
 #[strum(serialize_all = "UPPERCASE")]
