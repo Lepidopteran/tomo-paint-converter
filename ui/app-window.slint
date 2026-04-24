@@ -258,16 +258,14 @@ export component AppWindow inherits Window {
             horizontal-alignment: center;
         }
 
-        VerticalBox {
-            alignment: center;
-            spacing: 0.5rem;
+        Text {
+            text: "Import image or texture to convert";
+            horizontal-alignment: center;
+        }
 
-            Text {
-                text: "Import image or texture to convert";
-                horizontal-alignment: center;
-            }
-
+        Rectangle {
             Button {
+                preferred-width: 250px;
                 enabled: !loading && !image-loaded;
                 colorize-icon: true;
                 icon: @image-url("images/folder.svg");
