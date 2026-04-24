@@ -75,28 +75,13 @@ impl TextureEncoder for BcTextureEncoder {
 
 impl TegraSwizzle for BcTextureEncoder {
     fn swizzle_bytes(&self, width: u32, height: u32, bytes: &[u8]) -> Result<Vec<u8>> {
-        let format_width = compressed_size(width, self.format);
-        let format_height = compressed_size(height, self.format);
-
-        let mip = block_height_mip0(format_height);
+        let width = width.div_ceil(BLOCK_SIZE);
+        let height = height.div_ceil(BLOCK_SIZE);
+        let mip = block_height_mip0(height);
 
         let bytes = match self.format {
-            BcFormat::Bc1 => swizzle_block_linear(
-                format_width,
-                format_height,
-                DEPTH,
-                bytes,
-                mip,
-                BC1_BYTE_SIZE,
-            ),
-            BcFormat::Bc3 => swizzle_block_linear(
-                format_width,
-                format_height,
-                DEPTH,
-                bytes,
-                mip,
-                BC3_BYTE_SIZE,
-            ),
+            BcFormat::Bc1 => swizzle_block_linear(width, height, DEPTH, bytes, mip, BC1_BYTE_SIZE),
+            BcFormat::Bc3 => swizzle_block_linear(width, height, DEPTH, bytes, mip, BC3_BYTE_SIZE),
         }?;
 
         Ok(bytes)
@@ -119,7 +104,7 @@ impl TextureDecoder for BcTextureDecoder {
         Ok(match self.format {
             BcFormat::Bc1 => {
                 let bc1 = Format::Bc1;
-                let mut decoded_bytes: Vec<u8> = vec![0u8; data.len() / BLOCK_SIZE as usize * 4];
+                let mut decoded_bytes: Vec<u8> = vec![0u8; width as usize * height as usize * 4];
 
                 bc1.decompress(data, width as usize, height as usize, &mut decoded_bytes);
 
@@ -127,7 +112,7 @@ impl TextureDecoder for BcTextureDecoder {
             }
             BcFormat::Bc3 => {
                 let bc3 = Format::Bc3;
-                let mut decoded_bytes: Vec<u8> = vec![0u8; data.len() / BLOCK_SIZE as usize * 4];
+                let mut decoded_bytes: Vec<u8> = vec![0u8; width as usize * height as usize * 4];
 
                 bc3.decompress(data, width as usize, height as usize, &mut decoded_bytes);
 
@@ -144,36 +129,19 @@ impl TegraDeswizzle for BcTextureDecoder {
         height: u32,
         bytes: &[u8],
     ) -> color_eyre::Result<Vec<u8>> {
-        let format_width = compressed_size(width, self.format);
-        let format_height = compressed_size(height, self.format);
-        let mip = block_height_mip0(format_height);
+        let width = width.div_ceil(BLOCK_SIZE);
+        let height = height.div_ceil(BLOCK_SIZE);
+        let mip = block_height_mip0(height);
 
         let bytes = match self.format {
-            BcFormat::Bc1 => deswizzle_block_linear(
-                format_width,
-                format_height,
-                DEPTH,
-                bytes,
-                mip,
-                BC1_BYTE_SIZE,
-            ),
-            BcFormat::Bc3 => deswizzle_block_linear(
-                format_height,
-                format_width,
-                DEPTH,
-                bytes,
-                mip,
-                BC3_BYTE_SIZE,
-            ),
+            BcFormat::Bc1 => {
+                deswizzle_block_linear(width, height, DEPTH, bytes, mip, BC1_BYTE_SIZE)
+            }
+            BcFormat::Bc3 => {
+                deswizzle_block_linear(width, height, DEPTH, bytes, mip, BC3_BYTE_SIZE)
+            }
         }?;
 
         Ok(bytes)
-    }
-}
-
-fn compressed_size(size: u32, compression_format: BcFormat) -> u32 {
-    match compression_format {
-        BcFormat::Bc1 => div_round_up(size, BC1_BYTE_SIZE),
-        BcFormat::Bc3 => div_round_up(size, BC3_BYTE_SIZE),
     }
 }
