@@ -6,6 +6,9 @@ use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 pub mod cli;
 pub mod gui;
 
+mod loading;
+pub use loading::*;
+
 pub trait VecEnumModel: IntoEnumIterator + Display {
     fn model() -> VecModel<SharedString> {
         VecModel::from_iter(Self::iter().map(|v| SharedString::from(v.to_string())))

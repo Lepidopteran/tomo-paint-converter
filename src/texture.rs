@@ -1,5 +1,5 @@
-use color_eyre::eyre::Result;
-use image::{DynamicImage, EncodableLayout, ImageBuffer};
+use color_eyre::eyre::{OptionExt, Result};
+use image::{DynamicImage, EncodableLayout, ImageBuffer, RgbaImage};
 
 pub mod codecs;
 pub mod resize;
@@ -16,27 +16,16 @@ impl Texture {
         decoder: T,
         width: u32,
         height: u32,
-    ) -> Self {
-        Self {
-            inner_image: DynamicImage::ImageRgba8(
-                ImageBuffer::from_raw(
-                    width,
-                    height,
-                    decoder
-                        .decode_bytes(&bytes, width, height)
-                        .expect("Failed to decode texture"),
-                )
-                .expect("Failed to create image buffer"),
-            ),
-        }
+    ) -> Result<Self> {
+        Self::from_bytes(decoder.decode_bytes(&bytes, width, height)?, width, height)
     }
 
-    pub fn from_bytes(bytes: Vec<u8>, width: u32, height: u32) -> Self {
-        Self {
-            inner_image: DynamicImage::ImageRgba8(
-                ImageBuffer::from_raw(width, height, bytes).expect("Failed to create image buffer"),
-            ),
-        }
+    pub fn from_bytes(bytes: Vec<u8>, width: u32, height: u32) -> Result<Self> {
+        Ok(Self {
+            inner_image: RgbaImage::from_vec(width, height, bytes)
+                .ok_or_eyre("Could not create image buffer")?
+                .into(),
+        })
     }
 
     pub fn as_bytes(&self) -> Vec<u8> {
