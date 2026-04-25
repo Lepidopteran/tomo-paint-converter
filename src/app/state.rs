@@ -13,42 +13,36 @@ use super::*;
 mod file_dialog;
 use file_dialog::*;
 
-slint::include_modules!();
-
 #[derive(Debug, Clone, Copy, Display, EnumIter, EnumString)]
 enum PreviewType {
-    Source,
     Texture,
     Canvas,
+    Source,
     Thumbnail,
 }
 
 type Rgba8Buffer = SharedPixelBuffer<Rgba8Pixel>;
+type Rgba8Cache = RefCell<Option<Rgba8Buffer>>;
 
 #[derive(Default)]
 struct ImageDataCache {
-    source: Option<Rgba8Buffer>,
-    texture: Option<Rgba8Buffer>,
-    canvas: Option<Rgba8Buffer>,
-    thumbnail: Option<Rgba8Buffer>,
+    source: Rgba8Cache,
+    texture: Rgba8Cache,
+    canvas: Rgba8Cache,
+    thumbnail: Rgba8Cache,
 }
+
+type StateHandle = Rc<State>;
 
 #[derive(Default)]
 struct State {
-    source_bytes: Vec<u8>,
     // NOTE: Reduces the amount of resizing.
-    proxy_texture: Option<Texture>,
+    proxy_texture: RefCell<Option<Texture>>,
     cache: ImageDataCache,
 }
 
-pub fn run() -> Result<()> {
-    let app = AppWindow::new()?;
-    let state = Rc::new(RefCell::new(State::default()));
-
-    app.set_texture_type_model(ModelRc::new(PaintType::model()));
-    app.set_resize_filter_model(ModelRc::new(ResizeFilter::model()));
-    app.set_resize_method_model(ModelRc::new(ResizeType::model()));
-    app.set_viewer_mode_model(ModelRc::new(PreviewType::model()));
+pub fn setup(app: &AppWindow) -> Result<()> {
+    let state = Rc::new(State::default());
 
     let app_ref = app.as_weak();
     let state_ref = state.clone();
@@ -63,7 +57,6 @@ pub fn run() -> Result<()> {
     });
 
     let app_ref = app.as_weak();
-
     app.on_pick_folder_output(move || {
         let weak_app = app_ref.clone();
         slint::spawn_local(async move {
@@ -72,7 +65,12 @@ pub fn run() -> Result<()> {
         .unwrap();
     });
 
-    Ok(app.run()?)
+    app.set_texture_type_model(ModelRc::new(PaintType::model()));
+    app.set_resize_filter_model(ModelRc::new(ResizeFilter::model()));
+    app.set_resize_method_model(ModelRc::new(ResizeType::model()));
+    app.set_viewer_mode_model(ModelRc::new(PreviewType::model()));
+
+    Ok(())
 }
 
 async fn handle_output_folder(app: AppWindow) {
@@ -84,7 +82,7 @@ async fn handle_output_folder(app: AppWindow) {
     }
 }
 
-async fn handle_file_input(app: AppWindow, state: Rc<RefCell<State>>) {
+async fn handle_file_input(app: AppWindow, state: StateHandle) {
     app.set_file_dialog_opened(true);
     let file = file_dialog("Pick a file to import")
         .set_parent(&app.window().window_handle())
@@ -101,14 +99,15 @@ async fn handle_file_input(app: AppWindow, state: Rc<RefCell<State>>) {
 
         let texture = open_file(path).expect("Failed to open texture or image");
         let img = texture.as_image();
-
         let buffer =
             Rgba8Buffer::clone_from_slice(img.to_rgba8().as_raw(), img.width(), img.height());
 
-        app.set_viewer_image(Image::from_rgba8(buffer.clone()));
-        state.borrow_mut().cache.source.replace(buffer);
+        state.proxy_texture.borrow_mut().replace(texture);
+        state.cache.source.borrow_mut().replace(buffer.clone());
 
-        app.set_file_dialog_opened(false);
+        app.set_viewer_image(Image::from_rgba8(buffer));
         app.set_image_loaded(true);
     }
+
+    app.set_file_dialog_opened(false);
 }

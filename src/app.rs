@@ -3,19 +3,16 @@ use std::fmt::Display;
 use slint::{SharedString, VecModel};
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 
-pub mod cli;
-pub mod gui;
+mod cli;
+mod state;
 
 mod loading;
+mod processing;
+
 pub use loading::*;
+pub use processing::*;
 
-pub trait VecEnumModel: IntoEnumIterator + Display {
-    fn model() -> VecModel<SharedString> {
-        VecModel::from_iter(Self::iter().map(|v| SharedString::from(v.to_string())))
-    }
-}
-
-impl<T> VecEnumModel for T where T: IntoEnumIterator + Display {}
+slint::include_modules!();
 
 /// Output type of texture
 #[derive(clap::ValueEnum, Debug, Clone, Copy, Eq, PartialEq, EnumString, EnumIter, Display)]
@@ -47,5 +44,24 @@ impl PaintType {
 
     pub fn exclude_thumbnail(&self) -> bool {
         matches!(self, Self::FacePaint)
+    }
+}
+
+pub trait VecEnumModel: IntoEnumIterator + Display {
+    fn model() -> VecModel<SharedString> {
+        VecModel::from_iter(Self::iter().map(|v| SharedString::from(v.to_string())))
+    }
+}
+
+impl<T> VecEnumModel for T where T: IntoEnumIterator + Display {}
+
+pub fn run() -> color_eyre::eyre::Result<()> {
+    if let Some(command) = cli::parse_command() {
+        command.run()
+    } else {
+        let app = AppWindow::new()?;
+        state::setup(&app)?;
+
+        Ok(app.run()?)
     }
 }
