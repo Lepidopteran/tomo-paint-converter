@@ -15,21 +15,21 @@ use file_dialog::*;
 
 #[derive(Debug, Clone, Copy, Display, EnumIter, EnumString)]
 enum PreviewType {
+    Source,
     Texture,
     Canvas,
-    Source,
     Thumbnail,
 }
 
 type Rgba8Buffer = SharedPixelBuffer<Rgba8Pixel>;
-type Rgba8Cache = RefCell<Option<Rgba8Buffer>>;
+type ImageBuffer = RefCell<Option<Rgba8Buffer>>;
 
 #[derive(Default)]
-struct ImageDataCache {
-    source: Rgba8Cache,
-    texture: Rgba8Cache,
-    canvas: Rgba8Cache,
-    thumbnail: Rgba8Cache,
+struct ImageData {
+    source: ImageBuffer,
+    texture: ImageBuffer,
+    canvas: ImageBuffer,
+    thumbnail: ImageBuffer,
 }
 
 type StateHandle = Rc<State>;
@@ -38,7 +38,7 @@ type StateHandle = Rc<State>;
 struct State {
     // NOTE: Reduces the amount of resizing.
     proxy_texture: RefCell<Option<Texture>>,
-    cache: ImageDataCache,
+    images: ImageData,
 }
 
 pub fn setup(app: &AppWindow) -> Result<()> {
@@ -75,7 +75,10 @@ pub fn setup(app: &AppWindow) -> Result<()> {
 
 async fn handle_output_folder(app: AppWindow) {
     app.set_file_dialog_opened(true);
-    let file = file_dialog("Pick a folder").pick_folder().await;
+    let file = FileDialog::new()
+        .with_title("Select output folder")
+        .pick_folder()
+        .await;
 
     if let Some(file) = file {
         app.set_output_folder_path(file.path().to_string_lossy().to_string().into());
@@ -84,11 +87,9 @@ async fn handle_output_folder(app: AppWindow) {
 
 async fn handle_file_input(app: AppWindow, state: StateHandle) {
     app.set_file_dialog_opened(true);
-    let file = file_dialog("Pick a file to import")
-        .set_parent(&app.window().window_handle())
-        .add_filter("Supported formats", ALL_SUPPORTED_FORMATS)
-        .add_filter("Images", SUPPORTED_IMAGE_FORMATS)
-        .add_filter("Textures", SUPPORTED_TEXTURE_FORMATS)
+    let file = FileDialog::new()
+        .with_title("Select file to convert")
+        .add_supported_formats()
         .pick_file()
         .await;
 
@@ -103,7 +104,7 @@ async fn handle_file_input(app: AppWindow, state: StateHandle) {
             Rgba8Buffer::clone_from_slice(img.to_rgba8().as_raw(), img.width(), img.height());
 
         state.proxy_texture.borrow_mut().replace(texture);
-        state.cache.source.borrow_mut().replace(buffer.clone());
+        state.images.source.borrow_mut().replace(buffer.clone());
 
         app.set_viewer_image(Image::from_rgba8(buffer));
         app.set_image_loaded(true);
