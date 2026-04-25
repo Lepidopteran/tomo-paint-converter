@@ -3,7 +3,7 @@ use strum::{Display, EnumIter, EnumString};
 
 use super::Texture;
 
-#[derive(clap::ValueEnum, Display, EnumString, EnumIter, Debug, Clone, Copy)]
+#[derive(clap::ValueEnum, Display, EnumString, EnumIter, Debug, Clone, Copy, PartialEq, Eq)]
 #[strum(serialize_all = "title_case")]
 pub enum ResizeType {
     /// Preserve image aspect ratio
@@ -15,7 +15,7 @@ pub enum ResizeType {
     Exact,
 }
 
-#[derive(clap::ValueEnum, Debug, Clone, Copy, Display, EnumIter, EnumString)]
+#[derive(clap::ValueEnum, Debug, Clone, Copy, Display, EnumIter, EnumString, PartialEq, Eq)]
 pub enum ResizeFilter {
     /// Nearest neighbor
     Nearest,
