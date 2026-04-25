@@ -16,8 +16,11 @@ pub fn is_zstd_compressed(bytes: &[u8]) -> bool {
 }
 
 pub fn is_item_texture(bytes: &[u8]) -> bool {
-    const VALID_SIZES: &[usize; 2] = &[
+    const VALID_SIZES: &[usize; 3] = &[
         (FOOD_SIZE.div_ceil(BLOCK_SIZE) * FOOD_SIZE.div_ceil(BLOCK_SIZE) * BC1_BYTE_SIZE) as usize,
+        // Not sure why this validates to correct
+        (FOOD_SIZE.div_ceil(BLOCK_SIZE) * TEXTURE_SIZE.div_ceil(BLOCK_SIZE) * BC1_BYTE_SIZE)
+            as usize,
         (TEXTURE_SIZE.div_ceil(BLOCK_SIZE) * TEXTURE_SIZE.div_ceil(BLOCK_SIZE) * BC1_BYTE_SIZE)
             as usize,
     ];
