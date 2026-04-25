@@ -56,33 +56,12 @@ pub fn setup(app: &AppWindow) -> Result<()> {
         .unwrap();
     });
 
-    let app_ref = app.as_weak();
-    app.on_pick_folder_output(move || {
-        let weak_app = app_ref.clone();
-        slint::spawn_local(async move {
-            handle_output_folder(weak_app.upgrade().expect("Couldn't get app")).await;
-        })
-        .unwrap();
-    });
-
     app.set_texture_type_model(ModelRc::new(PaintType::model()));
     app.set_resize_filter_model(ModelRc::new(ResizeFilter::model()));
     app.set_resize_method_model(ModelRc::new(ResizeType::model()));
     app.set_viewer_mode_model(ModelRc::new(PreviewType::model()));
 
     Ok(())
-}
-
-async fn handle_output_folder(app: AppWindow) {
-    app.set_file_dialog_opened(true);
-    let file = FileDialog::new()
-        .with_title("Select output folder")
-        .pick_folder()
-        .await;
-
-    if let Some(file) = file {
-        app.set_output_folder_path(file.path().to_string_lossy().to_string().into());
-    }
 }
 
 async fn handle_file_input(app: AppWindow, state: StateHandle) {

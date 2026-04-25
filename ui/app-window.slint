@@ -44,8 +44,6 @@ export component AppWindow inherits Window {
     in-out property <int> item-index;
 
     callback pick_file_input();
-    callback pick_file_output();
-    callback pick_folder_output();
     callback export_button_clicked();
     callback update_preview();
 
@@ -208,17 +206,6 @@ export component AppWindow inherits Window {
                                 text: compression-settings.level;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
-                            }
-                        }
-                    }
-
-                    LabelBox {
-                        label: "Output Directory";
-                        FilePickerInput {
-                            path: output-folder-path;
-                            enabled: !loading;
-                            pick-requested => {
-                                pick_folder_output();
                             }
                         }
                     }
