@@ -183,6 +183,13 @@ pub fn setup(app: &AppWindow) -> Result<()> {
         );
     });
 
+    let app_ref = app.as_weak();
+    let state_ref = state.clone();
+    app.on_export_button_clicked(move || {
+        let app_ref = app_ref.clone();
+        let state = state_ref.clone();
+    });
+
     app.set_texture_type_model(ModelRc::new(PaintType::model()));
     app.set_resize_filter_model(ModelRc::new(ResizeFilter::model()));
     app.set_resize_method_model(ModelRc::new(ResizeType::model()));
@@ -205,7 +212,7 @@ async fn handle_file_input(app: AppWindow, state: StateHandle) {
 
         app.set_input_path(path.to_string_lossy().to_string().into());
 
-        let texture = open_file(path).expect("Failed to open texture or image");
+        let texture = loading::open_file(path).expect("Failed to open texture or image");
         state.input_texture.borrow_mut().replace(texture);
 
         state.images.texture.replace(None);

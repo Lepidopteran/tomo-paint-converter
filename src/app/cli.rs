@@ -15,7 +15,7 @@ use tomo_image_converter::{
     *,
 };
 
-use super::{PaintType, open_texture};
+use super::{PaintType, loading::open_texture};
 
 const DEFAULT_COMPRESSION_LEVEL: i32 = 19;
 
