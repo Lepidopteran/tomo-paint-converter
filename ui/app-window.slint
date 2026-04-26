@@ -62,13 +62,16 @@ export component AppWindow inherits Window {
                     HorizontalLayout {
                         spacing: 0.5rem;
                         Text {
-                            text: "Viewer Mode";
+                            text: "Preview Mode";
                             vertical-alignment: center;
                         }
 
                         ComboBox {
                             model: viewer-mode-model;
                             current-value <=> viewer-mode;
+                            selected() => {
+                                update_preview();
+                            }
                         }
                     }
                 }
