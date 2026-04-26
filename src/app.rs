@@ -7,10 +7,8 @@ mod cli;
 mod state;
 
 mod loading;
-mod processing;
 
 pub use loading::*;
-pub use processing::*;
 
 slint::include_modules!();
 

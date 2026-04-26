@@ -211,6 +211,7 @@ async fn handle_file_input(app: AppWindow, state: StateHandle) {
         state.images.texture.replace(None);
         state.images.canvas.replace(None);
         state.images.thumbnail.replace(None);
+
         app.set_image_loaded(true);
         app.invoke_update_preview();
     }
