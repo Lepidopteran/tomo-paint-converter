@@ -1,0 +1,98 @@
+
+import { Palette } from "std-widgets.slint";
+
+export component LabelBox inherits GridLayout {
+    in property <string> label;
+    spacing: 0.25rem;
+
+    Row {
+
+        Text {
+            text: root.label + ":";
+            vertical-alignment: bottom;
+            opacity: 0.5;
+        }
+    }
+
+    Row {
+        @children
+    }
+}
+
+export component FilePickerInput {
+    in property <string> path;
+    in property <bool> enabled: true;
+
+    callback pick-requested;
+    forward-focus: key-handler;
+    key-handler := FocusScope {
+        KeyBinding {
+            keys: @keys(Space);
+            activated => {
+                root.pick-requested();
+            }
+        }
+    }
+
+    Rectangle {
+        clip: true;
+        opacity: enabled ? 1 : 0.5;
+        border-radius: {
+            if (Platform.style-name == "fluent") {
+                2px
+            } else if (Platform.style-name == "material" || Platform.style-name == "cupertino") {
+                4px
+            } else if (Platform.style-name == "cosmic") {
+                9999px
+            } else {
+                1px
+            }
+        };
+
+        border-width: Platform.style-name == "fluent" ? 2px : 1px;
+        border-color: Palette.border;
+
+        TouchArea {
+            enabled: root.enabled;
+            clicked => {
+                root.pick-requested();
+            }
+        }
+
+        HorizontalLayout {
+
+            Rectangle {
+                horizontal-stretch: 1;
+                background: Palette.background;
+
+                VerticalLayout {
+                    padding: 0.5rem;
+
+                    Text {
+                        text: root.path;
+                        vertical-alignment: center;
+                        horizontal-alignment: right;
+                        overflow: elide;
+                    }
+                }
+            }
+
+            Rectangle {
+                background: Palette.control-background;
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    alignment: center;
+                    padding: 0.5rem;
+
+                    Image {
+                        width: 1.5rem;
+                        height: 1.5rem;
+                        source: @image-url("images/folder.svg");
+                        colorize: Palette.control-foreground;
+                    }
+                }
+            }
+        }
+    }
+}
