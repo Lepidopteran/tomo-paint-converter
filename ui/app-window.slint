@@ -16,6 +16,7 @@ import {
 
 import { FilePickerInput } from "./inputs.slint";
 import { LabelBox } from "inputs.slint";
+import { ImageViewer } from "image-viewer.slint";
 
 struct CompressionSettings {
     enabled: bool,
@@ -27,6 +28,8 @@ export component AppWindow inherits Window {
     in property <bool> loading;
     in property <bool> image-loaded;
     in property <bool> processing-image;
+    in property <string> processing-image-text;
+    in property <bool> saving;
     in property <[string]> viewer-mode-model;
     in property <[string]> texture-type-model;
     in property <[string]> resize-method-model;
@@ -93,30 +96,81 @@ export component AppWindow inherits Window {
                         }
 
                         Text {
-                            text: "Processing Image...";
+                            text: processing-image-text;
                             vertical-alignment: center;
                             horizontal-alignment: center;
                         }
                     }
                 }
 
-                GridLayout {
-                    Row {
-                        Image {
-                            vertical-stretch: 1;
-                            source: viewer-image;
+                VerticalLayout {
+                    property <float> zoom: 1.0;
+                    property <bool> manual-zoom: false;
+                    property <float> min-zoom: 0.01;
+                    property <float> max-zoom: 8.0;
+
+                    Timer {
+                        interval: 10ms;
+                        running: true;
+                        triggered => {
+                            if (manual-zoom || zoom == viewer.zoom) {
+                                return;
+                            }
+                            zoom = viewer.zoom;
                         }
                     }
 
-                    Row {
+                    HorizontalLayout {
+                        alignment: space-between;
+                        padding: 0.5rem;
+                        spacing: 0.5rem;
                         HorizontalLayout {
-                            alignment: start;
-                            padding: 0.5rem;
-                            spacing: 0.5rem;
                             Text {
-                                text: viewer-image.width + "x" + viewer-image.height;
+                                text: "Zoom";
+                                vertical-alignment: center;
+                                forward-focus: slider;
+                            }
+
+                            slider := Slider {
+                                width: 15rem;
+                                minimum: min-zoom;
+                                maximum: max-zoom;
+                                value: zoom;
+                                changed(value) => {
+                                    if (viewer.zoom != value) {
+                                        viewer.set-zoom(value);
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: zoom * 100 + "%";
                                 vertical-alignment: center;
                             }
+                        }
+
+                        Button {
+                            text: "Fit to View";
+                            primary: viewer.fit-to-view;
+                            clicked => {
+                                if (!viewer.fit-to-view) {
+                                    viewer.fit-view();
+                                }
+                            }
+                        }
+                    }
+
+                    viewer := ImageViewer {
+                        source: viewer-image;
+                    }
+
+                    HorizontalLayout {
+                        alignment: start;
+                        padding: 0.5rem;
+                        spacing: 0.5rem;
+                        Text {
+                            text: viewer-image.width + "x" + viewer-image.height;
+                            vertical-alignment: center;
                         }
                     }
                 }
@@ -278,12 +332,13 @@ export component AppWindow inherits Window {
         VerticalBox {
             alignment: center;
             loading-spinner := Spinner {
+                indeterminate: true;
                 preferred-width: 3rem;
                 horizontal-stretch: 0;
             }
 
             loading-text := Text {
-                text: "Loading...";
+                text: "Importing file...";
                 vertical-alignment: center;
                 horizontal-alignment: center;
             }
