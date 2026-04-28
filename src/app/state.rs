@@ -1,4 +1,10 @@
-use std::{cell::RefCell, rc::Rc, str::FromStr};
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    str::FromStr,
+    sync::{Arc, RwLock},
+    thread,
+};
 
 use color_eyre::eyre::Result;
 use image::GenericImageView;
@@ -45,122 +51,122 @@ struct TextureCache {
 
 #[derive(Default, Debug)]
 struct OutputCache {
-    texture: RefCell<Option<TextureCache>>,
-    canvas: RefCell<Option<Cache>>,
-    thumbnail: RefCell<Option<Cache>>,
+    texture: Option<TextureCache>,
+    canvas: Option<Cache>,
+    thumbnail: Option<Cache>,
 }
 
-type StateHandle = Rc<State>;
+type StateHandle = Arc<State>;
 
 #[derive(Default)]
 struct State {
-    input_texture: RefCell<Option<Texture>>,
-    images: OutputCache,
+    input_texture: RwLock<Option<Texture>>,
+    images: RwLock<OutputCache>,
 }
 
 impl State {
-    fn output_texture(
-        &self,
-        paint_type: PaintType,
-        resize_type: ResizeType,
-        resize_filter: ResizeFilter,
-    ) -> Vec<u8> {
-        if let Some(cached) = self.images.texture.borrow().as_ref()
-            && cached.resize_type == resize_type
-            && cached.resize_filter == resize_filter
-            && cached.paint_type == paint_type
-        {
-            return cached.bytes.to_vec();
-        }
-
-        let nsize = if paint_type == PaintType::Food {
-            FOOD_SIZE
-        } else {
-            TEXTURE_SIZE
-        };
-
-        let bytes = self
-            .input_texture
-            .borrow()
-            .as_ref()
-            .expect("No input texture")
-            .resize(nsize, nsize, resize_type, resize_filter)
-            .encode(BcTextureEncoder::new(BcFormat::Bc1))
-            .expect("Failed to encode texture");
-
-        self.images.texture.replace(
-            TextureCache {
-                bytes: bytes.clone(),
-                paint_type,
-                resize_type,
-                resize_filter,
-            }
-            .into(),
-        );
-
-        bytes
-    }
-
-    fn output_canvas(&self, resize_type: ResizeType, resize_filter: ResizeFilter) -> Vec<u8> {
-        if let Some(cached) = self.images.canvas.borrow().as_ref()
-            && cached.resize_type == resize_type
-            && cached.resize_filter == resize_filter
-        {
-            return cached.bytes.to_vec();
-        }
-
-        let bytes = self
-            .input_texture
-            .borrow()
-            .as_ref()
-            .expect("No input texture")
-            .resize(CANVAS_SIZE, CANVAS_SIZE, resize_type, resize_filter)
-            .into_bytes();
-
-        self.images.canvas.replace(
-            Cache {
-                bytes: bytes.clone(),
-                resize_type,
-                resize_filter,
-            }
-            .into(),
-        );
-
-        bytes
-    }
-
-    fn output_thumbnail(&self, resize_type: ResizeType, resize_filter: ResizeFilter) -> Vec<u8> {
-        if let Some(cached) = self.images.thumbnail.borrow().as_ref()
-            && cached.resize_type == resize_type
-            && cached.resize_filter == resize_filter
-        {
-            return cached.bytes.to_vec();
-        }
-
-        let bytes = self
-            .input_texture
-            .borrow()
-            .as_ref()
-            .expect("No input texture")
-            .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, resize_type, resize_filter)
-            .encode(BcTextureEncoder::new(BcFormat::Bc3))
-            .expect("Failed to encode texture");
-
-        self.images.thumbnail.replace(
-            Cache {
-                bytes: bytes.clone(),
-                resize_type,
-                resize_filter,
-            }
-            .into(),
-        );
-
-        bytes
-    }
+    // fn output_texture(
+    //     &self,
+    //     paint_type: PaintType,
+    //     resize_type: ResizeType,
+    //     resize_filter: ResizeFilter,
+    // ) -> Vec<u8> {
+    //     if let Some(cached) = self.images.texture.borrow().as_ref()
+    //         && cached.resize_type == resize_type
+    //         && cached.resize_filter == resize_filter
+    //         && cached.paint_type == paint_type
+    //     {
+    //         return cached.bytes.to_vec();
+    //     }
+    //
+    //     let nsize = if paint_type == PaintType::Food {
+    //         FOOD_SIZE
+    //     } else {
+    //         TEXTURE_SIZE
+    //     };
+    //
+    //     let bytes = self
+    //         .input_texture
+    //         .borrow()
+    //         .as_ref()
+    //         .expect("No input texture")
+    //         .resize(nsize, nsize, resize_type, resize_filter)
+    //         .encode(BcTextureEncoder::new(BcFormat::Bc1))
+    //         .expect("Failed to encode texture");
+    //
+    //     self.images.texture.replace(
+    //         TextureCache {
+    //             bytes: bytes.clone(),
+    //             paint_type,
+    //             resize_type,
+    //             resize_filter,
+    //         }
+    //         .into(),
+    //     );
+    //
+    //     bytes
+    // }
+    //
+    // fn output_canvas(&self, resize_type: ResizeType, resize_filter: ResizeFilter) -> Vec<u8> {
+    //     if let Some(cached) = self.images.canvas.borrow().as_ref()
+    //         && cached.resize_type == resize_type
+    //         && cached.resize_filter == resize_filter
+    //     {
+    //         return cached.bytes.to_vec();
+    //     }
+    //
+    //     let bytes = self
+    //         .input_texture
+    //         .borrow()
+    //         .as_ref()
+    //         .expect("No input texture")
+    //         .resize(CANVAS_SIZE, CANVAS_SIZE, resize_type, resize_filter)
+    //         .into_bytes();
+    //
+    //     self.images.canvas.replace(
+    //         Cache {
+    //             bytes: bytes.clone(),
+    //             resize_type,
+    //             resize_filter,
+    //         }
+    //         .into(),
+    //     );
+    //
+    //     bytes
+    // }
+    //
+    // fn output_thumbnail(&self, resize_type: ResizeType, resize_filter: ResizeFilter) -> Vec<u8> {
+    //     if let Some(cached) = self.images.thumbnail.borrow().as_ref()
+    //         && cached.resize_type == resize_type
+    //         && cached.resize_filter == resize_filter
+    //     {
+    //         return cached.bytes.to_vec();
+    //     }
+    //
+    //     let bytes = self
+    //         .input_texture
+    //         .borrow()
+    //         .as_ref()
+    //         .expect("No input texture")
+    //         .resize(THUMBNAIL_SIZE, THUMBNAIL_SIZE, resize_type, resize_filter)
+    //         .encode(BcTextureEncoder::new(BcFormat::Bc3))
+    //         .expect("Failed to encode texture");
+    //
+    //     self.images.thumbnail.replace(
+    //         Cache {
+    //             bytes: bytes.clone(),
+    //             resize_type,
+    //             resize_filter,
+    //         }
+    //         .into(),
+    //     );
+    //
+    //     bytes
+    // }
 }
 
 pub fn setup(app: &AppWindow) -> Result<()> {
-    let state = Rc::new(State::default());
+    let state = Arc::new(State::default());
 
     let app_ref = app.as_weak();
     let state_ref = state.clone();
@@ -211,16 +217,32 @@ async fn handle_file_input(app: AppWindow, state: StateHandle) {
         let path = file.path();
 
         app.set_input_path(path.to_string_lossy().to_string().into());
+        app.set_loading(true);
 
-        let texture = loading::open_file(path).expect("Failed to open texture or image");
-        state.input_texture.borrow_mut().replace(texture);
+        let path = path.to_path_buf();
+        let app_ref = app.as_weak();
+        thread::spawn(move || {
+            if let Ok(texture) = loading::open_file(path) {
+                state
+                    .input_texture
+                    .write()
+                    .expect("Failed to get input texture")
+                    .replace(texture);
 
-        state.images.texture.replace(None);
-        state.images.canvas.replace(None);
-        state.images.thumbnail.replace(None);
+                app_ref
+                    .upgrade_in_event_loop(move |handle| {
+                        handle.set_image_loaded(true);
+                        handle.invoke_update_preview();
+                        handle.set_loading(false);
+                    })
+                    .expect("Couldn't get app");
 
-        app.set_image_loaded(true);
-        app.invoke_update_preview();
+                let mut images = state.images.write().expect("Failed to get images");
+                images.canvas.take();
+                images.thumbnail.take();
+                images.texture.take();
+            };
+        });
     }
 
     app.set_file_dialog_opened(false);
@@ -254,7 +276,8 @@ fn handle_preview_update(app: AppWindow, state: StateHandle) {
 
         PreviewType::Source => state
             .input_texture
-            .borrow()
+            .read()
+            .expect("Couldn't read state")
             .as_ref()
             .expect("No input texture")
             .as_image()
@@ -262,28 +285,15 @@ fn handle_preview_update(app: AppWindow, state: StateHandle) {
     };
 
     let bytes = match preview_type {
-        PreviewType::Thumbnail => BcTextureDecoder::new(BcFormat::Bc3)
-            .decode_bytes(
-                &state.output_thumbnail(resize_type, resize_filter),
-                width,
-                height,
-            )
-            .expect("Failed to decode thumbnail"),
-        PreviewType::Texture => BcTextureDecoder::new(BcFormat::Bc1)
-            .decode_bytes(
-                &state.output_texture(paint_type, resize_type, resize_filter),
-                width,
-                height,
-            )
-            .expect("Failed to decode texture"),
-        PreviewType::Canvas => state.output_canvas(resize_type, resize_filter),
         PreviewType::Source => state
             .input_texture
-            .borrow()
+            .read()
+            .expect("Couldn't read state")
             .as_ref()
             .expect("No input texture")
             .as_bytes()
             .clone(),
+        _ => vec![0; (width * height * 4) as usize],
     };
 
     let buffer = Rgba8Buffer::clone_from_slice(&bytes, width, height);
