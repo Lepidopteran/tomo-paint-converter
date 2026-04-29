@@ -28,7 +28,6 @@ export component AppWindow inherits Window {
     in property <bool> loading;
     in property <bool> image-loaded;
     in property <bool> processing-image;
-    in property <string> processing-image-text;
     in property <bool> saving;
     in property <[string]> viewer-mode-model;
     in property <[string]> texture-type-model;
@@ -82,26 +81,6 @@ export component AppWindow inherits Window {
 
             Rectangle {
                 vertical-stretch: 1;
-
-                Rectangle {
-                    background: black;
-                    opacity: 0.5;
-                    visible: processing-image;
-                    VerticalBox {
-                        alignment: center;
-                        Spinner {
-                            indeterminate: true;
-                            preferred-width: 3rem;
-                            horizontal-stretch: 0;
-                        }
-
-                        Text {
-                            text: processing-image-text;
-                            vertical-alignment: center;
-                            horizontal-alignment: center;
-                        }
-                    }
-                }
 
                 VerticalLayout {
                     property <float> zoom: 1.0;
@@ -171,6 +150,28 @@ export component AppWindow inherits Window {
                         Text {
                             text: viewer-image.width + "x" + viewer-image.height;
                             vertical-alignment: center;
+                        }
+                    }
+                }
+
+                Rectangle {
+                    background: rgba(0, 0, 0, 0.5);
+                    visible: processing-image;
+                    VerticalBox {
+                        alignment: center;
+                        spacing: 2rem;
+                        Image {
+                            preferred-height: 12rem;
+                            source: @image-url("images/loading/cat.png");
+                            transform-rotation: sin(360deg * animation-tick() / 10s) * 10deg;
+                            transform-scale-x: abs(sin(360deg * animation-tick() / 3300ms) * 0.25) + 1;
+                            transform-scale-y: abs(sin(360deg * animation-tick() / 3301ms) * 0.25) + 1;
+                        }
+
+                        Text {
+                            text: "Processing image...";
+                            vertical-alignment: center;
+                            horizontal-alignment: center;
                         }
                     }
                 }
@@ -325,16 +326,17 @@ export component AppWindow inherits Window {
     }
 
     Rectangle {
-        opacity: 0.5;
-        background: black;
+        background: rgba(0, 0, 0, 0.5);
         visible: loading;
 
         VerticalBox {
             alignment: center;
-            loading-spinner := Spinner {
-                indeterminate: true;
-                preferred-width: 3rem;
-                horizontal-stretch: 0;
+            Image {
+                source: @image-url("images/loading/snek.png");
+                preferred-height: 8rem;
+                transform-rotation: sin(360deg * animation-tick() / 10s) * 10deg;
+                transform-scale-x: abs(sin(360deg * animation-tick() / 3300ms) * 0.25) + 1;
+                transform-scale-y: abs(sin(360deg * animation-tick() / 3301ms) * 0.25) + 1;
             }
 
             loading-text := Text {
