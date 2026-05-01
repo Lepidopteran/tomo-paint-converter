@@ -22,6 +22,10 @@ impl TextureCache {
         self.resize_type != resize_type || self.resize_filter != resize_filter
     }
 
+    pub fn is_valid(&self, resize_type: ResizeType, resize_filter: ResizeFilter) -> bool {
+        !self.is_invalid(resize_type, resize_filter)
+    }
+
     pub fn resize_type(&self) -> ResizeType {
         self.resize_type
     }
@@ -84,6 +88,15 @@ impl UgcTextureCache {
             || resize_filter != self.resize_filter
             || (paint_type != self.paint_type
                 && (paint_type == PaintType::Food || self.paint_type == PaintType::Food))
+    }
+
+    pub fn is_valid(
+        &self,
+        paint_type: PaintType,
+        resize_type: ResizeType,
+        resize_filter: ResizeFilter,
+    ) -> bool {
+        !self.is_invalid(paint_type, resize_type, resize_filter)
     }
 
     pub fn as_bytes(&self) -> &[u8] {

@@ -69,6 +69,7 @@ export component AppWindow inherits Window {
                         }
 
                         ComboBox {
+                            enabled: !processing-image && !loading && !saving && !file-dialog-opened;
                             model: viewer-mode-model;
                             current-value <=> viewer-mode;
                             selected() => {
@@ -190,7 +191,7 @@ export component AppWindow inherits Window {
                         label: "Input";
                         FilePickerInput {
                             path: input-path;
-                            enabled: !loading;
+                            enabled: !loading && !processing-image && !saving && !file-dialog-opened;
                             pick-requested => {
                                 pick_file_input();
                             }
@@ -200,6 +201,7 @@ export component AppWindow inherits Window {
                     LabelBox {
                         label: "Texture Type";
                         ComboBox {
+                            enabled: !loading && !processing-image && !saving && !file-dialog-opened;
                             model: texture-type-model;
                             current-value <=> texture-type;
                             selected() => update_preview();
@@ -209,6 +211,7 @@ export component AppWindow inherits Window {
                     LabelBox {
                         label: "Item Index";
                         SpinBox {
+                            enabled: !loading && !processing-image && !saving && !file-dialog-opened;
                             minimum: 0;
                             maximum: max-index;
                             value <=> item-index;
@@ -218,6 +221,7 @@ export component AppWindow inherits Window {
                     LabelBox {
                         label: "Resize Method";
                         ComboBox {
+                            enabled: !loading && !processing-image && !saving && !file-dialog-opened;
                             model: resize-method-model;
                             current-value <=> resize-method;
                             selected() => update_preview();
@@ -227,6 +231,7 @@ export component AppWindow inherits Window {
                     LabelBox {
                         label: "Resize Filter";
                         ComboBox {
+                            enabled: !loading && !processing-image && !saving && !file-dialog-opened;
                             model: resize-filter-model;
                             current-value <=> resize-filter;
                             selected() => update_preview();
@@ -238,6 +243,7 @@ export component AppWindow inherits Window {
                         VerticalLayout {
                             CheckBox {
                                 text: "Enabled";
+                                enabled: !saving;
                                 checked <=> compression-settings.enabled;
                             }
                         }
@@ -250,7 +256,7 @@ export component AppWindow inherits Window {
                                 horizontal-stretch: 1;
                                 minimum: 0;
                                 maximum: 20;
-                                enabled: compression-settings.enabled;
+                                enabled: compression-settings.enabled && !saving;
                                 value: compression-settings.level;
                                 changed => {
                                     compression-settings.level = self.value;
@@ -270,9 +276,10 @@ export component AppWindow inherits Window {
                 }
 
                 Button {
-                    text: "Export";
-                    primary: !loading && !file-dialog-opened;
-                    enabled: !loading;
+                    text: saving ? "Exporting..." : "Export";
+                    opacity: saving ? abs(sin(360deg * animation-tick() / 3300ms) * 0.25) + 1 : 1;
+                    primary: !loading && !file-dialog-opened && !processing-image;
+                    enabled: !loading && !file-dialog-opened && !processing-image;
                     clicked => {
                         export_button_clicked();
                     };
