@@ -1,7 +1,7 @@
 use std::{fs::read, io::Cursor, path::Path};
 
-use color_eyre::eyre::Result;
-use image::ImageReader;
+use color_eyre::eyre::{OptionExt, Result};
+use image::{ImageError, ImageFormat, ImageReader, guess_format};
 use tomo_image_converter::{
     CANVAS_SIZE, FOOD_SIZE, TEXTURE_SIZE, THUMBNAIL_SIZE, Texture,
     texture::{
@@ -43,11 +43,25 @@ pub fn open_file(path: impl AsRef<Path>) -> Result<Texture> {
     let path = path.as_ref();
     let bytes = read(path)?;
 
-    ImageReader::new(Cursor::new(&bytes))
-        .with_guessed_format()?
-        .decode()
-        .map(Texture::from_image)
-        .or_else(|_| load_texture(&bytes))
+    let format = guess_format(&bytes).or_else(|err| match err {
+        ImageError::Unsupported(_) => {
+            let extension = path
+                .extension()
+                .ok_or_eyre("Could not determine file type")?;
+
+            ImageFormat::from_extension(extension).ok_or_eyre("Could not determine file type")
+        }
+        _ => Err(err.into()),
+    });
+
+    if let Ok(format) = format {
+        let mut reader = ImageReader::new(Cursor::new(bytes));
+        reader.set_format(format);
+
+        Ok(reader.decode().map(Texture::from_image)?)
+    } else {
+        load_texture(&bytes)
+    }
 }
 
 pub fn open_texture(path: impl AsRef<Path>) -> Result<Texture> {
