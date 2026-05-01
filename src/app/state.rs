@@ -345,10 +345,7 @@ async fn handle_file_input(app: AppWindow, state: StateHandle) {
                     })
                     .expect("Couldn't get app");
 
-                let mut cache = state.cache.write().expect("Failed to get cache");
-                cache.canvas.take();
-                cache.thumbnail.take();
-                cache.texture.take();
+                state.cache.write().expect("Failed to get cache").clear();
             };
         });
     }
