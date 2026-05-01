@@ -1,0 +1,156 @@
+import { Palette } from "std-widgets.slint";
+export component ImageViewer {
+
+    in property <image> source: @image-url("images/debug_cat.png");
+    in property <ImageRendering> image-rendering: smooth;
+    in property <float> min-zoom: 0.01;
+    in property <float> max-zoom: 8.0;
+    in property <bool> show-transparent-background: true;
+    out property <bool> fit-to-view: true;
+
+    pure function fitted-zoom() -> float {
+        return min(root.width / 1px / root.source.width, root.height / 1px / root.source.height) * 0.9;
+    }
+
+    pure function viewport-zoom() -> float {
+        return root.fit-to-view ? fitted-zoom() : root.zoom;
+    }
+
+    pure function center-x() -> length {
+        return (root.width - root.source.width * viewport-zoom() * 1px) * 0.5;
+    }
+
+    pure function center-y() -> length {
+        return (root.height - root.source.height * viewport-zoom() * 1px) * 0.5;
+    }
+
+    property <length> offset-x: root.fit-to-view ? center-x() : 0px;
+    property <length> offset-y: root.fit-to-view ? center-y() : 0px;
+    out property <float> zoom: fitted-zoom();
+
+    property <length> drag-start-x: 0px;
+    property <length> drag-start-y: 0px;
+    property <length> drag-offset-x: 0px;
+    property <length> drag-offset-y: 0px;
+
+    property <bool> dragging: false;
+
+    public function fit-view() {
+        root.zoom = fitted-zoom();
+        root.offset-x = center-x();
+        root.offset-y = center-y();
+        root.fit-to-view = true;
+    }
+
+    function update-offsets() {
+        if (root.fit-to-view) {
+            root.zoom = fitted-zoom();
+            root.offset-x = center-x();
+            root.offset-y = center-y();
+            root.fit-to-view = false;
+        }
+    }
+
+    public function set-zoom(zoom: float) {
+        update-offsets();
+        let zoom_ratio = zoom / root.zoom;
+        root.offset-x = root.width / 2 - (root.width / 2 - root.offset-x) * zoom_ratio;
+        root.offset-y = root.height / 2 - (root.height / 2 - root.offset-y) * zoom_ratio;
+
+        root.zoom = zoom;
+    }
+
+    Rectangle {
+        preferred-width: 100%;
+        preferred-height: 100%;
+        clip: true;
+        Rectangle {
+            property <length> offset-x: root.fit-to-view ? center-x() : root.offset-x;
+            property <length> offset-y: root.fit-to-view ? center-y() : root.offset-y;
+
+            drop-shadow-blur: 12px;
+            drop-shadow-color: rgba(0, 0, 0, 0.25);
+            drop-shadow-offset-x: 6px;
+            drop-shadow-offset-y: 6px;
+            width: root.source.width * viewport-zoom() * 1px;
+            height: root.source.height * viewport-zoom() * 1px;
+            x: offset-x;
+            y: offset-y;
+            clip: true;
+
+            Image {
+                visible: show-transparent-background;
+                width: root.width;
+                height: root.height;
+                x: -offset-x;
+                y: -offset-y;
+                source: @image-url("images/transparent_background.png");
+                horizontal-tiling: repeat;
+                vertical-tiling: repeat;
+                accessible-role: none;
+            }
+
+            Rectangle {
+                background: Palette.alternate-background;
+                opacity: show-transparent-background ? 0.75 : 1.0;
+                width: parent.width;
+                height: parent.height;
+            }
+
+            image := Image {
+                source: root.source;
+                horizontal-alignment: left;
+                vertical-alignment: top;
+                width: parent.width;
+                height: parent.height;
+                accessible-role: none;
+            }
+        }
+
+        touch-area := TouchArea {
+            width: parent.width;
+            height: parent.height;
+            mouse-cursor: dragging ? grabbing : grab;
+            pointer-event(event) => {
+                let valid_button = event.button == PointerEventButton.left || event.button == PointerEventButton.middle;
+
+                if (event.kind == PointerEventKind.down && valid_button) {
+                    root.drag-start-x = self.mouse-x;
+                    root.drag-start-y = self.mouse-y;
+                    root.drag-offset-x = root.offset-x;
+                    root.drag-offset-y = root.offset-y;
+                    dragging = true;
+                } else if (event.kind == PointerEventKind.up && valid_button) {
+                    dragging = false;
+                }
+                if (event.kind == PointerEventKind.move && dragging) {
+                    root.offset-x = root.drag-offset-x + (self.mouse-x - root.drag-start-x);
+                    root.offset-y = root.drag-offset-y + (self.mouse-y - root.drag-start-y);
+                    update-offsets();
+                }
+            }
+
+            scroll-event(event) => {
+                if (root.dragging) {
+                    return EventResult.reject;
+                }
+                update-offsets();
+
+                if (event.modifiers.control) {
+                    root.offset-x += event.delta-x;
+                    root.offset-y += event.delta-y;
+                    return EventResult.accept;
+                }
+                let zoom_factor = event.delta-y > 0 ? 1.1 : 0.9;
+                let updated_zoom = clamp(root.zoom * zoom_factor, root.min-zoom, root.max-zoom);
+                let zoom_ratio = updated_zoom / root.zoom;
+                root.offset-x = self.mouse-x - (self.mouse-x - root.offset-x) * zoom_ratio;
+                root.offset-y = self.mouse-y - (self.mouse-y - root.offset-y) * zoom_ratio;
+                root.drag-offset-x = root.offset-x;
+                root.drag-offset-y = root.offset-y;
+                root.zoom = updated_zoom;
+                EventResult.accept
+            }
+        }
+    }
+}

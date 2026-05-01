@@ -2,6 +2,7 @@
 name = "tomo-image-converter"
 version = "0.1.0"
 edition = "2024"
+build = "build.rs"
 
 [dependencies]
 clap = { version = "4.6.0", features = ["derive", "cargo"] }
@@ -10,3 +11,18 @@ image = "0.25.10"
 tegra_swizzle = "0.4.0"
 texpresso = "2.0.2"
 zstd = "0.13.3"
+rfd = { version = "0.17.2", features = ["xdg-portal"] }
+strum = "0.28.0"
+strum_macros = "0.28.0"
+log = { version = "0.4.29", features = ["std"] }
+
+slint = { version = "1.16.0", features = ["image-default-formats", "log", "raw-window-handle-06"] }
+tracing = { version = "0.1.44" }
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+
+[build-dependencies]
+slint-build = "1.16.0"
+
+[profile.release]
+codegen-units = 1
+lto = true
