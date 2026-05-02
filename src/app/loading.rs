@@ -1,7 +1,7 @@
 use std::{fs::read, io::Cursor, path::Path};
 
 use color_eyre::eyre::{OptionExt, Result};
-use image::{ImageError, ImageFormat, ImageReader, guess_format};
+use image::{ImageError, ImageFormat, ImageReader, guess_format, metadata::Cicp};
 use tomo_image_converter::{
     CANVAS_SIZE, FOOD_SIZE, TEXTURE_SIZE, THUMBNAIL_SIZE, Texture,
     texture::{
@@ -58,7 +58,10 @@ pub fn open_file(path: impl AsRef<Path>) -> Result<Texture> {
         let mut reader = ImageReader::new(Cursor::new(bytes));
         reader.set_format(format);
 
-        Ok(reader.decode().map(Texture::from_image)?)
+        let mut texture = reader.decode().map(Texture::from_image)?;
+        texture.apply_color_space(Cicp::SRGB_LINEAR)?;
+
+        Ok(texture)
     } else {
         load_texture(&bytes)
     }

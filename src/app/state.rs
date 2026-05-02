@@ -1,14 +1,13 @@
 use std::{
     fs::File,
     io::Write,
-    ops::Not,
     str::FromStr,
     sync::{Arc, RwLock},
     thread,
 };
 
 use color_eyre::eyre::Result;
-use image::{DynamicImage, RgbaImage};
+use image::{ConvertColorOptions, DynamicImage, EncodableLayout, RgbaImage, metadata::Cicp};
 use slint::{Image, ModelRc, Rgba8Pixel, SharedPixelBuffer};
 use strum::{Display, EnumIter, EnumString};
 use tomo_image_converter::{
@@ -359,26 +358,18 @@ fn handle_preview_update(app: AppWindow, state: StateHandle) {
     let resize_type = ResizeType::from(&app);
     let resize_filter = ResizeFilter::from(&app);
 
-    tracing::debug!(
-        "Updating preview with type: {:?}, paint_type: {:?}, resize_type: {:?}, resize_filter: {:?}",
-        preview_type,
-        paint_type,
-        resize_type,
-        resize_filter
-    );
-
     if preview_type == PreviewType::Source {
         let source = state.source_image.read().expect("Couldn't read image");
 
         let (image, width, height) = {
-            let image = source.as_ref().expect("No source image");
+            let image = source.clone().expect("No source image");
+            let width = image.width();
+            let height = image.height();
 
-            (image.as_raw(), image.width(), image.height())
+            (image.into_raw(), width, height)
         };
 
-        app.set_viewer_image(Image::from_rgba8(Rgba8Buffer::clone_from_slice(
-            image, width, height,
-        )));
+        set_viewer_image(&app, &image, width, height);
 
         return;
     }
@@ -427,8 +418,7 @@ fn handle_preview_update(app: AppWindow, state: StateHandle) {
             _ => cache,
         };
 
-        let buffer = Rgba8Buffer::clone_from_slice(bytes, size, size);
-        app.set_viewer_image(Image::from_rgba8(buffer));
+        set_viewer_image(&app, bytes, size, size);
 
         return;
     }
@@ -446,10 +436,9 @@ fn handle_preview_update(app: AppWindow, state: StateHandle) {
             PreviewType::Source => unreachable!("Source should be handled already"),
         };
 
-        let buffer = Rgba8Buffer::clone_from_slice(&bytes, size, size);
         app_ref
             .upgrade_in_event_loop(move |handle| {
-                handle.set_viewer_image(Image::from_rgba8(buffer));
+                set_viewer_image(&handle, &bytes, size, size);
                 handle.set_processing_image(false);
             })
             .expect("Couldn't get app");
@@ -619,4 +608,25 @@ fn handle_export_button_clicked(app: AppWindow, state: StateHandle) {
                 .expect("Couldn't get app");
         }
     });
+}
+
+fn set_viewer_image(app: &AppWindow, bytes: &[u8], width: u32, height: u32) {
+    let mut image =
+        image::RgbaImage::from_raw(width, height, bytes.to_vec()).expect("Failed to load image");
+
+    image
+        .set_color_space(Cicp::SRGB_LINEAR)
+        .expect("Failed to set color space");
+
+    if app.get_display_in_srgb() {
+        image
+            .apply_color_space(Cicp::SRGB, ConvertColorOptions::default())
+            .expect("Failed to convert to sRGB");
+    }
+
+    app.set_viewer_image(Image::from_rgba8(Rgba8Buffer::clone_from_slice(
+        image.as_raw(),
+        width,
+        height,
+    )));
 }

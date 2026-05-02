@@ -1,5 +1,7 @@
 use color_eyre::eyre::{OptionExt, Result};
-use image::{DynamicImage, EncodableLayout, ImageBuffer, RgbaImage};
+use image::{
+    ColorType, ConvertColorOptions, DynamicImage, EncodableLayout, RgbaImage, metadata::Cicp,
+};
 
 pub mod codecs;
 pub mod resize;
@@ -68,6 +70,24 @@ impl Texture {
         filter: resize::ResizeFilter,
     ) -> Texture {
         resize::resize(self, nwidth, nheight, method, filter)
+    }
+
+    pub fn color_type(&self) -> ColorType {
+        self.inner_image.color()
+    }
+
+    pub fn color_space(&self) -> Cicp {
+        self.inner_image.color_space()
+    }
+
+    pub fn set_color_space(&mut self, color_space: Cicp) -> Result<()> {
+        Ok(self.inner_image.set_color_space(color_space)?)
+    }
+
+    pub fn apply_color_space(&mut self, color_space: Cicp) -> Result<()> {
+        Ok(self
+            .inner_image
+            .apply_color_space(color_space, ConvertColorOptions::default())?)
     }
 }
 
