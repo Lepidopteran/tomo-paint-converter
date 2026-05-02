@@ -43,6 +43,7 @@ export component AppWindow inherits Window {
     in-out property <string> texture-type;
     in-out property <string> resize-method;
     in-out property <string> resize-filter;
+    in-out property <bool> display-in-srgb: true;
     in-out property <int> item-index;
 
     callback pick_file_input();
@@ -59,7 +60,16 @@ export component AppWindow inherits Window {
             Rectangle {
                 background: Palette.alternate-background;
                 HorizontalBox {
-                    alignment: end;
+                    alignment: space-between;
+
+                    CheckBox {
+                        text: "Display in Srgb";
+                        checked <=> display-in-srgb;
+                        enabled: !loading && !processing-image && !saving && !file-dialog-opened;
+                        changed checked => {
+                            update_preview();
+                        }
+                    }
 
                     HorizontalLayout {
                         spacing: 0.5rem;
