@@ -470,7 +470,7 @@ fn handle_export_button_clicked(app: AppWindow, state: StateHandle) {
             });
 
         if response.is_some() {
-            app.set_saving(true);
+            app.set_exporting(true);
         }
 
         app.set_file_dialog_opened(false);
@@ -603,7 +603,7 @@ fn handle_export_button_clicked(app: AppWindow, state: StateHandle) {
 
             app_ref
                 .upgrade_in_event_loop(|handle| {
-                    handle.set_saving(false);
+                    handle.set_exporting(false);
                 })
                 .expect("Couldn't get app");
         }
