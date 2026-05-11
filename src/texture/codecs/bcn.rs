@@ -1,6 +1,6 @@
 use strum::{Display, EnumIter, EnumString};
 use tegra_swizzle::{
-    block_height_mip0, div_round_up,
+    block_height_mip0,
     swizzle::{deswizzle_block_linear, swizzle_block_linear},
 };
 use texpresso::{Format, Params};
