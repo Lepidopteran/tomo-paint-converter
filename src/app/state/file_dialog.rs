@@ -31,7 +31,7 @@ pub const SUPPORTED_IMAGE_FORMATS: &[&str] = &[
 ];
 
 pub const ENCODEABLE_IMAGE_FORMATS: &[&str] = &[
-    "avif", "bmp", "exr", "ff", "gif", "hdr", "ico", "jpeg", "png", "pnm", "qoi", "tga", "tiff",
+    "png", "avif", "bmp", "exr", "ff", "gif", "hdr", "ico", "jpeg", "pnm", "qoi", "tga", "tiff",
     "webp",
 ];
 
@@ -40,9 +40,7 @@ pub const SUPPORTED_TEXTURE_FORMATS: &[&str] = &["canvas", "ugctex", "ugctex.zs"
 #[derive(Debug, Default)]
 pub struct FileDialogBuilder {
     title: Option<String>,
-    supported_formats_filter: Option<bool>,
-    supported_image_formats_filter: Option<bool>,
-    supported_texture_formats_filter: Option<bool>,
+    filters: Vec<(String, Vec<String>)>,
 }
 
 impl FileDialogBuilder {
@@ -55,19 +53,33 @@ impl FileDialogBuilder {
         self
     }
 
-    pub fn formats_filter(mut self, enabled: bool) -> Self {
-        self.supported_formats_filter = Some(enabled);
+    pub fn add_filter(mut self, name: impl Into<String>, extensions: &[&str]) -> Self {
+        self.filters.push((
+            name.into(),
+            extensions.iter().map(|s| s.to_string()).collect(),
+        ));
+
         self
     }
 
-    pub fn image_formats_filter(mut self, enabled: bool) -> Self {
-        self.supported_image_formats_filter = Some(enabled);
-        self
+    pub fn formats_filter(self) -> Self {
+        self.add_filter("Supported formats", ALL_SUPPORTED_FORMATS)
     }
 
-    pub fn texture_formats_filter(mut self, enabled: bool) -> Self {
-        self.supported_texture_formats_filter = Some(enabled);
-        self
+    pub fn image_formats_filter(self) -> Self {
+        self.add_filter("Supported image formats", SUPPORTED_IMAGE_FORMATS)
+    }
+
+    pub fn texture_formats_filter(self) -> Self {
+        self.add_filter("Supported texture formats", SUPPORTED_TEXTURE_FORMATS)
+    }
+
+    pub fn encodable_formats_filter(self) -> Self {
+        let mut builder = self;
+        for format in ENCODEABLE_IMAGE_FORMATS {
+            builder = builder.add_filter(format.to_uppercase().as_str(), &[format]);
+        }
+        builder
     }
 
     pub async fn pick_file(self) -> Option<FileHandle> {
@@ -88,30 +100,8 @@ impl FileDialogBuilder {
             inner = inner.set_title(&title);
         }
 
-        if self.supported_formats_filter.is_none()
-            && self.supported_image_formats_filter.is_none()
-            && self.supported_texture_formats_filter.is_none()
-        {
-            inner = inner.add_filter("Supported formats", ALL_SUPPORTED_FORMATS);
-            inner = inner.add_filter("Supported image formats", SUPPORTED_IMAGE_FORMATS);
-            inner = inner.add_filter("Supported texture formats", SUPPORTED_TEXTURE_FORMATS);
-        } else {
-            if let Some(supported_formats_filter) = self.supported_formats_filter {
-                if supported_formats_filter {
-                    inner = inner.add_filter("Supported formats", ALL_SUPPORTED_FORMATS);
-                }
-            }
-            if let Some(supported_image_formats_filter) = self.supported_image_formats_filter {
-                if supported_image_formats_filter {
-                    inner = inner.add_filter("Supported image formats", SUPPORTED_IMAGE_FORMATS);
-                }
-            }
-            if let Some(supported_texture_formats_filter) = self.supported_texture_formats_filter {
-                if supported_texture_formats_filter {
-                    inner =
-                        inner.add_filter("Supported texture formats", SUPPORTED_TEXTURE_FORMATS);
-                }
-            }
+        for (name, extensions) in self.filters {
+            inner = inner.add_filter(&name, &extensions);
         }
 
         inner = inner.set_parent(&super::window_handle());
@@ -122,13 +112,4 @@ impl FileDialogBuilder {
 
         inner
     }
-}
-
-pub async fn save_image(title: impl Into<String>) -> Option<FileHandle> {
-    FileDialogBuilder::new()
-        .title(title)
-        .build()
-        .add_filter("Supported image formats", ENCODEABLE_IMAGE_FORMATS)
-        .save_file()
-        .await
 }

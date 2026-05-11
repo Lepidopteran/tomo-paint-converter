@@ -1,4 +1,5 @@
 use std::{
+    ffi::OsStr,
     fs::File,
     io::Write,
     str::FromStr,
@@ -7,7 +8,7 @@ use std::{
 };
 
 use color_eyre::eyre::Result;
-use image::{ConvertColorOptions, DynamicImage, EncodableLayout, RgbaImage, metadata::Cicp};
+use image::{ConvertColorOptions, DynamicImage, ExtendedColorType, RgbaImage, metadata::Cicp};
 use slint::{Image, ModelRc, Rgba8Pixel, SharedPixelBuffer, Weak, WindowHandle};
 use strum::{Display, EnumIter, EnumString};
 use tomo_image_converter::{
@@ -270,9 +271,7 @@ impl State {
 pub fn setup(app: &AppWindow) -> Result<()> {
     let state = Arc::new(State::default());
 
-    APP_REF
-        .set(app.as_weak())
-        .expect("Couldn't set app reference");
+    let _ = APP_REF.set(app.as_weak());
 
     let app_ref = app.as_weak();
     let state_ref = state.clone();
@@ -305,6 +304,11 @@ pub fn setup(app: &AppWindow) -> Result<()> {
         );
     });
 
+    let app_ref = app.as_weak();
+    app.on_save_button_clicked(move || {
+        handle_save_button_clicked(app_ref.upgrade().expect("Couldn't get app"));
+    });
+
     app.set_texture_type_model(ModelRc::new(PaintType::model()));
     app.set_resize_filter_model(ModelRc::new(ResizeFilter::model()));
     app.set_resize_method_model(ModelRc::new(ResizeType::model()));
@@ -317,7 +321,9 @@ async fn handle_file_input(app: AppWindow, state: StateHandle) {
     app.set_file_dialog_opened(true);
     let file = FileDialogBuilder::new()
         .title("Select file to convert")
-        .build()
+        .formats_filter()
+        .texture_formats_filter()
+        .image_formats_filter()
         .pick_file()
         .await;
 
@@ -460,6 +466,66 @@ fn handle_preview_update(app: AppWindow, state: StateHandle) {
     });
 }
 
+fn handle_save_button_clicked(app: AppWindow) {
+    let (tx, rx) = std::sync::mpsc::sync_channel(1);
+
+    app.set_saving(true);
+    slint::spawn_local(async move {
+        tx.send(
+            FileDialogBuilder::new()
+                .title("Save image")
+                .encodable_formats_filter()
+                .save_file()
+                .await,
+        )
+    })
+    .expect("Couldn't spawn thread");
+
+    let app_ref = app.as_weak();
+    thread::spawn(move || {
+        while let Ok(response) = rx.recv()
+            && let Some(file_handle) = response
+        {
+            let (tx, rx) = std::sync::mpsc::sync_channel::<Rgba8Buffer>(1);
+            app_ref
+                .upgrade_in_event_loop(move |handle| {
+                    tx.send(
+                        handle
+                            .get_viewer_image()
+                            .to_rgba8()
+                            .expect("Failed to get pixels"),
+                    )
+                    .expect("Failed to send pixels");
+                })
+                .expect("Couldn't get app");
+
+            while let Ok(buffer) = rx.recv() {
+                let ext = file_handle
+                    .path()
+                    .extension()
+                    .and_then(OsStr::to_str)
+                    .unwrap_or("png");
+                let path = file_handle.path().with_extension(ext);
+
+                image::save_buffer(
+                    path,
+                    buffer.as_bytes(),
+                    buffer.width(),
+                    buffer.height(),
+                    ExtendedColorType::Rgba8,
+                )
+                .expect("Failed to save image");
+            }
+
+            app_ref
+                .upgrade_in_event_loop(|handle| {
+                    handle.set_saving(false);
+                })
+                .expect("Couldn't get app");
+        }
+    });
+}
+
 fn handle_export_button_clicked(app: AppWindow, state: StateHandle) {
     app.set_file_dialog_opened(true);
 
@@ -469,7 +535,7 @@ fn handle_export_button_clicked(app: AppWindow, state: StateHandle) {
     slint::spawn_local(async move {
         let app = app_ref.upgrade().expect("Couldn't get app");
         let response = FileDialogBuilder::new()
-            .build()
+            .title("Select output folder")
             .pick_folder()
             .await
             .map(|folder| {
