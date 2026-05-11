@@ -4,16 +4,21 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
+use directories::{BaseDirs, ProjectDirs};
 use slint::{SharedString, VecModel};
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use tomo_image_converter::texture::resize::{ResizeFilter, ResizeType};
 
 mod cli;
+mod config;
 mod state;
 
 mod loading;
 
 slint::include_modules!();
+
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const APP_NAME: &str = "Tomo Paint Converter";
 
 /// Output type of texture
 #[derive(clap::ValueEnum, Debug, Clone, Copy, Eq, PartialEq, EnumString, EnumIter, Display)]
@@ -72,6 +77,15 @@ impl From<&AppWindow> for PaintType {
     fn from(value: &AppWindow) -> Self {
         PaintType::from_str(value.get_texture_type().as_str()).expect("Invalid PaintType")
     }
+}
+
+pub fn project_dirs() -> ProjectDirs {
+    ProjectDirs::from("codes", "blaine", "Tomo-Paint-Converter")
+        .expect("Failed to get project directories")
+}
+
+pub fn base_dirs() -> BaseDirs {
+    BaseDirs::new().expect("Failed to get base directories")
 }
 
 pub fn run() -> color_eyre::eyre::Result<()> {
