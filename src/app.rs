@@ -1,4 +1,8 @@
-use std::{fmt::Display, str::FromStr};
+use std::{
+    fmt::Display,
+    str::FromStr,
+    sync::{Arc, OnceLock},
+};
 
 use slint::{SharedString, VecModel};
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};

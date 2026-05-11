@@ -1,4 +1,6 @@
-use rfd::{AsyncFileDialog, FileHandle};
+use std::env::{self, var};
+
+use rfd::{AsyncFileDialog, FileDialog, FileHandle};
 use slint::WindowHandle;
 
 pub const ALL_SUPPORTED_FORMATS: &[&str] = &[
@@ -28,56 +30,105 @@ pub const SUPPORTED_IMAGE_FORMATS: &[&str] = &[
     "tiff", "webp",
 ];
 
+pub const ENCODEABLE_IMAGE_FORMATS: &[&str] = &[
+    "avif", "bmp", "exr", "ff", "gif", "hdr", "ico", "jpeg", "png", "pnm", "qoi", "tga", "tiff",
+    "webp",
+];
+
 pub const SUPPORTED_TEXTURE_FORMATS: &[&str] = &["canvas", "ugctex", "ugctex.zs", "canvas.zs"];
 
 #[derive(Debug, Default)]
-pub struct FileDialog {
-    inner: AsyncFileDialog,
+pub struct FileDialogBuilder {
+    title: Option<String>,
+    supported_formats_filter: Option<bool>,
+    supported_image_formats_filter: Option<bool>,
+    supported_texture_formats_filter: Option<bool>,
 }
 
-impl FileDialog {
+impl FileDialogBuilder {
     pub fn new() -> Self {
-        Self {
-            inner: AsyncFileDialog::new(),
-        }
+        Self::default()
     }
 
-    pub async fn pick_folder(self) -> Option<FileHandle> {
-        self.inner.pick_folder().await
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
+    pub fn formats_filter(mut self, enabled: bool) -> Self {
+        self.supported_formats_filter = Some(enabled);
+        self
+    }
+
+    pub fn image_formats_filter(mut self, enabled: bool) -> Self {
+        self.supported_image_formats_filter = Some(enabled);
+        self
+    }
+
+    pub fn texture_formats_filter(mut self, enabled: bool) -> Self {
+        self.supported_texture_formats_filter = Some(enabled);
+        self
     }
 
     pub async fn pick_file(self) -> Option<FileHandle> {
-        let mut dialog = self.inner;
-        if cfg!(target_os = "windows") || cfg!(target_os = "linux") {
-            dialog = dialog.add_filter("All files", &["*"]);
+        self.build().pick_file().await
+    }
+
+    pub async fn pick_folder(self) -> Option<FileHandle> {
+        self.build().pick_folder().await
+    }
+
+    pub async fn save_file(self) -> Option<FileHandle> {
+        self.build().save_file().await
+    }
+
+    pub fn build(self) -> AsyncFileDialog {
+        let mut inner = AsyncFileDialog::new();
+        if let Some(title) = self.title {
+            inner = inner.set_title(&title);
         }
 
-        dialog.pick_file().await
+        if self.supported_formats_filter.is_none()
+            && self.supported_image_formats_filter.is_none()
+            && self.supported_texture_formats_filter.is_none()
+        {
+            inner = inner.add_filter("Supported formats", ALL_SUPPORTED_FORMATS);
+            inner = inner.add_filter("Supported image formats", SUPPORTED_IMAGE_FORMATS);
+            inner = inner.add_filter("Supported texture formats", SUPPORTED_TEXTURE_FORMATS);
+        } else {
+            if let Some(supported_formats_filter) = self.supported_formats_filter {
+                if supported_formats_filter {
+                    inner = inner.add_filter("Supported formats", ALL_SUPPORTED_FORMATS);
+                }
+            }
+            if let Some(supported_image_formats_filter) = self.supported_image_formats_filter {
+                if supported_image_formats_filter {
+                    inner = inner.add_filter("Supported image formats", SUPPORTED_IMAGE_FORMATS);
+                }
+            }
+            if let Some(supported_texture_formats_filter) = self.supported_texture_formats_filter {
+                if supported_texture_formats_filter {
+                    inner =
+                        inner.add_filter("Supported texture formats", SUPPORTED_TEXTURE_FORMATS);
+                }
+            }
+        }
+
+        inner = inner.set_parent(&super::window_handle());
+
+        if cfg!(target_os = "windows") || cfg!(target_os = "linux") {
+            inner = inner.add_filter("All files", &["*"]);
+        }
+
+        inner
     }
+}
 
-    pub fn add_supported_formats(mut self) -> Self {
-        self.inner = self
-            .inner
-            .add_filter("Supported formats", ALL_SUPPORTED_FORMATS);
-
-        self.inner = self.inner.add_filter("Images", SUPPORTED_IMAGE_FORMATS);
-        self.inner = self.inner.add_filter("Textures", SUPPORTED_TEXTURE_FORMATS);
-
-        self
-    }
-
-    pub fn set_parent(mut self, parent: &WindowHandle) -> Self {
-        self.inner = self.inner.set_parent(parent);
-        self
-    }
-
-    pub fn add_filter(mut self, name: &str, extensions: &[&str]) -> Self {
-        self.inner = self.inner.add_filter(name, extensions);
-        self
-    }
-
-    pub fn with_title(mut self, title: &str) -> Self {
-        self.inner = self.inner.set_title(title);
-        self
-    }
+pub async fn save_image(title: impl Into<String>) -> Option<FileHandle> {
+    FileDialogBuilder::new()
+        .title(title)
+        .build()
+        .add_filter("Supported image formats", ENCODEABLE_IMAGE_FORMATS)
+        .save_file()
+        .await
 }

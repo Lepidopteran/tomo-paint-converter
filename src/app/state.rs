@@ -8,7 +8,7 @@ use std::{
 
 use color_eyre::eyre::Result;
 use image::{ConvertColorOptions, DynamicImage, EncodableLayout, RgbaImage, metadata::Cicp};
-use slint::{Image, ModelRc, Rgba8Pixel, SharedPixelBuffer};
+use slint::{Image, ModelRc, Rgba8Pixel, SharedPixelBuffer, Weak, WindowHandle};
 use strum::{Display, EnumIter, EnumString};
 use tomo_image_converter::{
     CANVAS_SIZE, FOOD_SIZE, TEXTURE_SIZE, THUMBNAIL_SIZE, Texture,
@@ -28,6 +28,18 @@ use file_dialog::*;
 
 mod cache;
 use cache::*;
+
+static APP_REF: OnceLock<Weak<AppWindow>> = OnceLock::new();
+
+pub fn window_handle() -> WindowHandle {
+    APP_REF
+        .get()
+        .expect("Couldn't get app")
+        .upgrade()
+        .expect("Couldn't get app")
+        .window()
+        .window_handle()
+}
 
 type Rgba8Buffer = SharedPixelBuffer<Rgba8Pixel>;
 
@@ -258,6 +270,10 @@ impl State {
 pub fn setup(app: &AppWindow) -> Result<()> {
     let state = Arc::new(State::default());
 
+    APP_REF
+        .set(app.as_weak())
+        .expect("Couldn't set app reference");
+
     let app_ref = app.as_weak();
     let state_ref = state.clone();
 
@@ -299,10 +315,9 @@ pub fn setup(app: &AppWindow) -> Result<()> {
 
 async fn handle_file_input(app: AppWindow, state: StateHandle) {
     app.set_file_dialog_opened(true);
-    let file = FileDialog::new()
-        .with_title("Select file to convert")
-        .set_parent(&app.window().window_handle())
-        .add_supported_formats()
+    let file = FileDialogBuilder::new()
+        .title("Select file to convert")
+        .build()
         .pick_file()
         .await;
 
@@ -453,9 +468,8 @@ fn handle_export_button_clicked(app: AppWindow, state: StateHandle) {
     let app_ref = app.as_weak();
     slint::spawn_local(async move {
         let app = app_ref.upgrade().expect("Couldn't get app");
-        let window_handle = app.window().window_handle();
-        let response = FileDialog::new()
-            .set_parent(&window_handle)
+        let response = FileDialogBuilder::new()
+            .build()
             .pick_folder()
             .await
             .map(|folder| {
