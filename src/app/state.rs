@@ -2,13 +2,14 @@ use std::{
     ffi::OsStr,
     fs::File,
     io::Write,
+    path::PathBuf,
     str::FromStr,
     sync::{Arc, RwLock},
     thread,
 };
 
 use color_eyre::eyre::Result;
-use image::{ConvertColorOptions, DynamicImage, ExtendedColorType, RgbaImage, metadata::Cicp};
+use image::{ConvertColorOptions, DynamicImage, ImageBuffer, RgbaImage, metadata::Cicp};
 use slint::{Image, ModelRc, Rgba8Pixel, SharedPixelBuffer, Weak, WindowHandle};
 use strum::{Display, EnumIter, EnumString};
 use tomo_image_converter::{
@@ -470,11 +471,22 @@ fn handle_save_button_clicked(app: AppWindow) {
     let (tx, rx) = std::sync::mpsc::sync_channel(1);
 
     app.set_saving(true);
+
+    let input_path: PathBuf = app.get_input_path().to_string().into();
     slint::spawn_local(async move {
         tx.send(
             FileDialogBuilder::new()
                 .title("Save image")
                 .encodable_formats_filter()
+                .build()
+                .set_directory(input_path.parent().expect("Failed to get parent"))
+                .set_file_name(format!(
+                    "{}.png",
+                    input_path
+                        .file_prefix()
+                        .expect("Failed to get file stem")
+                        .to_string_lossy()
+                ))
                 .save_file()
                 .await,
         )
@@ -500,20 +512,23 @@ fn handle_save_button_clicked(app: AppWindow) {
                 .expect("Couldn't get app");
 
             while let Ok(buffer) = rx.recv() {
-                let ext = file_handle
-                    .path()
-                    .extension()
-                    .and_then(OsStr::to_str)
-                    .unwrap_or("png");
-                let path = file_handle.path().with_extension(ext);
+                let path = file_handle.path().with_extension(
+                    file_handle
+                        .path()
+                        .extension()
+                        .and_then(OsStr::to_str)
+                        .unwrap_or("png"),
+                );
 
-                image::save_buffer(
-                    path,
-                    buffer.as_bytes(),
-                    buffer.width(),
-                    buffer.height(),
-                    ExtendedColorType::Rgba8,
+                DynamicImage::ImageRgba8(
+                    ImageBuffer::from_raw(
+                        buffer.width(),
+                        buffer.width(),
+                        buffer.as_bytes().to_vec(),
+                    )
+                    .expect("Failed to create image"),
                 )
+                .save(path)
                 .expect("Failed to save image");
             }
 
