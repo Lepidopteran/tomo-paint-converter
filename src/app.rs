@@ -10,7 +10,6 @@ use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 use tomo_image_converter::texture::resize::{ResizeFilter, ResizeType};
 
 mod cli;
-mod config;
 mod state;
 
 mod loading;
