@@ -51,4 +51,3 @@ jobs:
         with:
           executable-name: tomo-paint-converter
           target: ${{ matrix.platform.target }}
-          changes-file: "Changes.md"
