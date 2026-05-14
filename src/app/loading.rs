@@ -2,7 +2,7 @@ use std::{fs::read, io::Cursor, path::Path};
 
 use color_eyre::eyre::{OptionExt, Result};
 use image::{ImageError, ImageFormat, ImageReader, guess_format, metadata::Cicp};
-use tomo_image_converter::{
+use tomo_paint_converter::{
     CANVAS_SIZE, FOOD_SIZE, TEXTURE_SIZE, THUMBNAIL_SIZE, Texture,
     texture::{
         codecs::bcn::{BC1_BYTE_SIZE, BC3_BYTE_SIZE, BLOCK_SIZE, BcFormat, BcTextureDecoder},

@@ -1,4 +1,4 @@
-use tomo_image_converter::texture::resize::{ResizeFilter, ResizeType};
+use tomo_paint_converter::texture::resize::{ResizeFilter, ResizeType};
 
 use crate::app::PaintType;
 

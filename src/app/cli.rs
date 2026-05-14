@@ -6,7 +6,7 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use tomo_image_converter::{
+use tomo_paint_converter::{
     texture::{
         codecs::bcn::{BcFormat, BcTextureEncoder},
         resize::{ResizeFilter, ResizeType},

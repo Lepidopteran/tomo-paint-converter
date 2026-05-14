@@ -6,7 +6,7 @@ use std::{
 
 use slint::{SharedString, VecModel};
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
-use tomo_image_converter::texture::resize::{ResizeFilter, ResizeType};
+use tomo_paint_converter::texture::resize::{ResizeFilter, ResizeType};
 
 mod cli;
 mod state;

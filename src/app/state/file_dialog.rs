@@ -1,7 +1,4 @@
-use std::env::{self, var};
-
-use rfd::{AsyncFileDialog, FileDialog, FileHandle};
-use slint::WindowHandle;
+use rfd::{AsyncFileDialog, FileHandle};
 
 pub const ALL_SUPPORTED_FORMATS: &[&str] = &[
     "avif",

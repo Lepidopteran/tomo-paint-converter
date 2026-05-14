@@ -12,7 +12,7 @@ use color_eyre::eyre::Result;
 use image::{ConvertColorOptions, DynamicImage, ImageBuffer, RgbaImage, metadata::Cicp};
 use slint::{Image, ModelRc, Rgba8Pixel, SharedPixelBuffer, Weak, WindowHandle};
 use strum::{Display, EnumIter, EnumString};
-use tomo_image_converter::{
+use tomo_paint_converter::{
     CANVAS_SIZE, FOOD_SIZE, TEXTURE_SIZE, THUMBNAIL_SIZE, Texture,
     texture::{
         TextureDecoder,
